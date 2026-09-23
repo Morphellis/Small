@@ -4,27 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>СМОЛ тренажёр</title>
+  <title>СМОЛ</title>
   <meta name="description" content="Тренажёр теста СМОЛ (Мини-Мульт, 71 вопрос): шкалы и профиль пересчитываются после каждого ответа.">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-in">
-      <h1>СМОЛ (Мини-Мульт) — тренажёр</h1>
-      <div class="controls">
-        <div class="seg" role="radiogroup" aria-label="Пол">
-          <label><input type="radio" name="sex" value="male"><span>Мужской</span></label>
-          <label><input type="radio" name="sex" value="female"><span>Женский</span></label>
-        </div>
-        <div class="progress" title="Отвечено вопросов">
-          <span id="progressText">0 / 71</span>
-          <span class="bar"><span id="progressBar"></span></span>
-        </div>
-      </div>
-    </div>
-  </header>
-
   <section class="panel" id="panel" aria-label="Баллы">
     <div class="wrap">
       <div class="panel-head">
@@ -64,7 +48,6 @@
   </section>
 
   <main class="wrap">
-    <div class="gate" id="gate">Выберите пол в шапке: Т-баллы считаются по разным нормам для мужчин и женщин. До этого вопросы недоступны.</div>
     <ol class="questions" id="questions"></ol>
 
     <section class="sheet" aria-labelledby="sheetTitle">
@@ -82,12 +65,12 @@
     <footer class="foot">
       <p><strong>Тренировочный инструмент. Не является психодиагностикой, результаты нельзя использовать для постановки диагноза.</strong></p>
       <p>Высокие значения — Т ≥ 70, низкие — Т ≤ 39, как на psytests.org; пунктир на графике — 40 и 70. «Не знаю» не засчитывается ни в одну шкалу. Результат недостоверен, если сырой балл L больше 4 или F больше 6 (правило СМОЛ), тогда тест проходят повторно. Поправка на K добавляется к шкалам 1, 4, 7, 8, 9 по таблице бланка.</p>
-      <p>Перевод в Т-баллы — по профильным листам Козюли (отдельно для мужчин и женщин), как на psytests.org. Сырой балл для шкал 1, 4, 7, 8, 9 берётся с поправкой K. Значения сняты с листа с точностью около ±1 Т; «≈» — значение за краем листа.</p>
+      <p>Перевод в Т-баллы — по мужскому профильному листу Козюли, как на psytests.org. Сырой балл для шкал 1, 4, 7, 8, 9 берётся с поправкой K. Значения сняты с листа с точностью около ±1 Т; «≈» — значение за краем листа.</p>
     </footer>
   </main>
 
-  <script src="data.js?v=8"></script>
-  <script src="scoring.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="data.js?v=9"></script>
+  <script src="scoring.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

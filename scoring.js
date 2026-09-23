@@ -92,16 +92,15 @@
     return add;
   }
 
-  // T = 50 + 10 * (X - M) / SD, M и SD из норм для выбранного пола.
-  function tScoreFormula(scale, x, sex) {
+  // T = 50 + 10 * (X - M) / SD, мужские нормы.
+  function tScoreFormula(scale, x) {
     const i = D.norms.order.indexOf(scale);
-    const n = D.norms[sex];
-    return 50 + (10 * (x - n.M[i])) / n.SD[i];
+    return 50 + (10 * (x - D.norms.M[i])) / D.norms.SD[i];
   }
 
   // По профильному листу: значение из таблицы, за краем листа — продление по прямой.
-  function tScoreSheet(scale, x, sex) {
-    const table = D.profileSheets[sex][scale];
+  function tScoreSheet(scale, x) {
+    const table = D.profileSheet[scale];
     const last = table.from + table.t.length - 1;
     if (x >= table.from && x <= last) return { t: table.t[x - table.from], extrapolated: false };
     const n = table.t.length;
@@ -118,9 +117,9 @@
     return { t: table.t[edge - table.from] + (num / den) * (x - edge), extrapolated: true };
   }
 
-  function tScore(scale, x, sex, method) {
-    if ((method || T_METHOD) === "formula") return { t: tScoreFormula(scale, x, sex), extrapolated: false };
-    return tScoreSheet(scale, x, sex);
+  function tScore(scale, x, method) {
+    if ((method || T_METHOD) === "formula") return { t: tScoreFormula(scale, x), extrapolated: false };
+    return tScoreSheet(scale, x);
   }
 
   function levelOf(t) {
@@ -130,10 +129,9 @@
   }
 
   /*
-   * Полный расчёт профиля. sex: "male" | "female" | null (без пола Т-баллы не считаются).
-   * Возвращает сырые, с поправкой K и Т-баллы по всем шкалам.
+   * Полный расчёт профиля (нормы мужские): сырые, с поправкой K и Т-баллы по всем шкалам.
    */
-  function computeProfile(answers, sex, method, keyVariant) {
+  function computeProfile(answers, method, keyVariant) {
     const m = method || T_METHOD;
     const extrapolated = {};
     const { raw, dontKnow, answered } = rawScores(answers, keyVariant);
@@ -143,18 +141,12 @@
     const level = {};
     for (const s of ORDER) {
       corrected[s] = raw[s] + (add[s] || 0);
-      if (sex === "male" || sex === "female") {
-        const r = tScore(s, corrected[s], sex, m);
-        t[s] = r.t;
-        extrapolated[s] = r.extrapolated;
-        level[s] = levelOf(t[s]);
-      } else {
-        t[s] = null;
-        extrapolated[s] = false;
-        level[s] = null;
-      }
+      const r = tScore(s, corrected[s], m);
+      t[s] = r.t;
+      extrapolated[s] = r.extrapolated;
+      level[s] = levelOf(t[s]);
     }
-    return { sex: sex || null, method: m, raw, kAdd: add, corrected, t, extrapolated, level, dontKnow, answered, validity: validity(raw) };
+    return { method: m, raw, kAdd: add, corrected, t, extrapolated, level, dontKnow, answered, validity: validity(raw) };
   }
 
   // Достоверность по сырым L и F: { valid, checks: [{ scale, raw, limit, exceeded, reason }] }.

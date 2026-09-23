@@ -16,10 +16,6 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    sexInputs: document.querySelectorAll('input[name="sex"]'),
-    seg: document.querySelector(".seg"),
-    progressText: $("progressText"),
-    progressBar: $("progressBar"),
     panel: $("panel"),
     panelMeta: $("panelMeta"),
     panelBody: $("panelBody"),
@@ -38,14 +34,12 @@
     toggleTable: $("toggleTable"),
     resetBtn: $("resetBtn"),
     toast: $("toast"),
-    gate: $("gate"),
     questions: $("questions"),
     sheetGrid: $("sheetGrid"),
 
   };
 
   const state = {
-    sex: "male", // по умолчанию мужской: тест проходят в основном мужчины
     answers: new Array(N).fill(null),
     history: Array.from({ length: N }, () => []),
     keyMode: false,
@@ -61,7 +55,7 @@
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        sex: state.sex, answers: state.answers, history: state.history,
+        answers: state.answers, history: state.history,
         keyMode: state.keyMode, showChart: state.showChart, showTable: state.showTable, profileView: state.profileView
       }));
     } catch (e) { /* хранилище недоступно — работаем без него */ }
@@ -82,7 +76,6 @@
   }
 
   function applySnapshot(s) {
-    state.sex = s.sex === "male" || s.sex === "female" ? s.sex : "male";
     state.answers = S.normalizeAnswers(s.answers);
     state.history = Array.from({ length: N }, (_, i) => {
       const h = Array.isArray(s.history) && Array.isArray(s.history[i]) ? s.history[i] : [];
@@ -334,12 +327,6 @@
     out.push(`<line x1="${sepX}" x2="${sepX}" y1="${m.t}" y2="${m.t + ph}" stroke="${css("--grid-strong")}" stroke-width="1"/>`);
     ORDER.forEach((s, i) => out.push(`<text class="xl" x="${x(i)}" y="${H - 8}" text-anchor="middle">${s}</text>`));
 
-    if (!state.sex) {
-      out.push(`<text class="empty" x="${m.l + pw / 2}" y="${m.t + ph / 2}" text-anchor="middle">Выберите пол, чтобы построить профиль</text>`);
-      el.chart.innerHTML = out.join("");
-      return;
-    }
-
     const changed = new Set(state.last ? state.last.changed : []);
     const line = (from, to, color) => {
       const pts = ORDER.slice(from, to).map((s, k) => `${x(from + k).toFixed(1)},${y(profile.t[s]).toFixed(1)}`).join(" ");
@@ -387,19 +374,11 @@
   }
 
   function renderSummary() {
-    el.progressText.textContent = `${profile.answered} / ${N}`;
-    el.progressBar.style.width = (profile.answered / N) * 100 + "%";
-    const sexWord = state.sex === "male" ? "мужской" : state.sex === "female" ? "женский" : "пол не выбран";
-    el.panelMeta.textContent = `${sexWord} · K = ${profile.raw.K}`;
-    el.gate.hidden = !!state.sex;
-    el.questions.classList.toggle("locked", !state.sex);
-    el.seg.classList.toggle("need", !state.sex);
-    for (const b of el.questions.querySelectorAll("button")) b.disabled = !state.sex;
-    for (const r of el.sexInputs) r.checked = r.value === state.sex;
+    el.panelMeta.textContent = `K = ${profile.raw.K}`;
   }
 
   function renderScores() {
-    profile = S.computeProfile(state.answers, state.sex);
+    profile = S.computeProfile(state.answers);
     renderTable();
     renderValidity();
     renderStrip();
@@ -416,13 +395,12 @@
 
   // ---------- действия ----------
   function setAnswer(i, value, opts) {
-    if (!state.sex) return;
     const prev = state.answers[i];
     const next = prev === value ? null : value; // повторный клик снимает ответ
-    const before = S.computeProfile(state.answers, state.sex);
+    const before = S.computeProfile(state.answers);
     state.answers[i] = next;
     state.history[i].push(next);
-    const after = S.computeProfile(state.answers, state.sex);
+    const after = S.computeProfile(state.answers);
     const prevLast = state.last ? state.last.q : null;
     state.last = { q: i, changed: S.changedScales(before, after).filter((s) => FOCUS.has(s)), before, after };
     const prevCur = state.cur;
@@ -472,15 +450,8 @@
     for (const li of el.questions.children) li.style.scrollMarginTop = h + 12 + "px";
   }
 
-  function setSex(sex) {
-    state.sex = sex;
-    state.last = null;
-    renderAll();
-    persist();
-  }
-
   function resetAll() {
-    if (!window.confirm("Сбросить все ответы и историю? Пол и способ перевода сохранятся.")) return;
+    if (!window.confirm("Сбросить все ответы и историю?")) return;
     state.answers = new Array(N).fill(null);
     state.history = Array.from({ length: N }, () => []);
     state.last = null;
@@ -500,13 +471,6 @@
 
   // ---------- события ----------
   function bind() {
-    for (const r of el.sexInputs) {
-      r.addEventListener("change", () => {
-        setSex(r.value);
-        r.blur(); // иначе клавиши 1/2/3 и стрелки уходят в переключатель пола
-      });
-    }
-
     el.questions.addEventListener("click", (e) => {
       const li = e.target.closest(".q");
       if (!li) return;
@@ -533,10 +497,7 @@
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const tag = (e.target.tagName || "").toLowerCase();
-      if (tag === "select" || tag === "textarea") return;
-      if (tag === "input" && e.target.type !== "radio") return;
-      if (tag === "input") e.target.blur();
-      if (!state.sex) return;
+      if (tag === "select" || tag === "textarea" || tag === "input") return;
       const code = e.code;
       let answer = null;
       if (code === "Digit1" || code === "Numpad1" || code === "KeyY") answer = "Y";

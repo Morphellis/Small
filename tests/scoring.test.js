@@ -15,36 +15,20 @@ function check(p, raw, corrected, t) {
 }
 
 test("все «Верно», мужской", () => {
-  const p = S.computeProfile(fill(() => "Y"), "male", "formula", "classic");
+  const p = S.computeProfile(fill(() => "Y"), "formula", "classic");
   check(p,
     [0, 12, 0, 9, 8, 9, 11, 10, 13, 18, 11],
     [0, 12, 0, 9, 8, 9, 11, 10, 13, 18, 11],
     [37.97, 88.7, 27.54, 55.87, 53.66, 47.49, 52.86, 84.31, 47.73, 65.27, 80.77]);
 });
 
-test("все «Неверно», женский", () => {
-  const p = S.computeProfile(fill(() => "N"), "female", "formula", "classic");
-  check(p,
-    [5, 3, 16, 5, 11, 17, 8, 4, 3, 2, 1],
-    [5, 3, 16, 13, 11, 17, 14, 4, 19, 18, 4],
-    [79.33, 52.11, 81.36, 65.51, 60.13, 66.18, 72.32, 46.15, 69.91, 66.0, 37.7]);
-});
-
 test("все «Не знаю», мужской", () => {
-  const p = S.computeProfile(fill(() => "?"), "male", "formula", "classic");
+  const p = S.computeProfile(fill(() => "?"), "formula", "classic");
   check(p,
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [37.97, 36.52, 27.54, 25.87, 23.81, 16.56, 1.22, 26.84, -4.06, 1.66, 9.81]);
   assert.equal(p.dontKnow, 71);
-});
-
-test("нечётные «Верно», чётные «Неверно», женский", () => {
-  const p = S.computeProfile(fill((n) => (n % 2 ? "Y" : "N")), "female", "formula", "classic");
-  check(p,
-    [1, 8, 5, 5, 9, 9, 8, 5, 9, 9, 5],
-    [1, 8, 5, 8, 9, 9, 10, 5, 14, 14, 6],
-    [45.71, 81.35, 39.7, 48.39, 53.47, 42.51, 51.26, 51.15, 47.89, 51.71, 48.17]);
 });
 
 test("поправка K = 9 даёт +5, +4, +9, +9, +2", () => {
@@ -62,7 +46,7 @@ test("таблица поправок совпадает с округление
 });
 
 test("пустые ответы не дают баллов, Т считаются и без ответов", () => {
-  const p = S.computeProfile([], "male");
+  const p = S.computeProfile([]);
   ORDER.forEach((s) => assert.equal(p.raw[s], 0));
   assert.equal(Math.round(p.t.L), 40); // лист, мужской: L = 0 → 39.5
   assert.equal(p.answered, 0);
@@ -71,33 +55,24 @@ test("пустые ответы не дают баллов, Т считаютс�
 test("«Не знаю» не попадает ни в одну шкалу и увеличивает счётчик", () => {
   const a = new Array(71).fill(null);
   a[8] = "?"; // вопрос 9 входит в F, 1, 2, 3 по ответу «Да»
-  const p = S.computeProfile(a, "male");
+  const p = S.computeProfile(a);
   ORDER.forEach((s) => assert.equal(p.raw[s], 0));
   assert.equal(p.dontKnow, 1);
 });
 
-test("смена пола меняет Т, но не сырые", () => {
-  const a = fill((n) => (n % 3 ? "Y" : "N"));
-  const m = S.computeProfile(a, "male");
-  const f = S.computeProfile(a, "female");
-  assert.deepEqual(m.raw, f.raw);
-  assert.deepEqual(m.corrected, f.corrected);
-  assert.notEqual(m.t.F, f.t.F);
-});
-
 test("ответ, меняющий K, подсвечивает и шкалы с поправкой", () => {
-  const before = S.computeProfile([], "male");
+  const before = S.computeProfile([]);
   const a = new Array(71).fill(null);
   a[22] = "N"; // вопрос 23: K «Нет», 3 «Нет»
-  const after = S.computeProfile(a, "male");
+  const after = S.computeProfile(a);
   assert.deepEqual(S.changedScales(before, after), ["K", "3", "1", "4", "7", "8"].sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y)));
 });
 
 test("ответ, не засчитанный ни в одну шкалу, ничего не меняет", () => {
-  const before = S.computeProfile([], "female");
+  const before = S.computeProfile([]);
   const a = new Array(71).fill(null);
   a[19] = "Y"; // вопрос 20 у psytests входит только в F по ответу «Нет»
-  assert.deepEqual(S.changedScales(before, S.computeProfile(a, "female")), []);
+  assert.deepEqual(S.changedScales(before, S.computeProfile(a)), []);
   assert.deepEqual(S.QUESTION_KEYS[19], [{ scale: "F", answer: "N" }]);
 });
 
@@ -118,36 +93,32 @@ test("состояния регистрационного листа", () => {
 });
 
 test("достоверность: L > 4 или F > 6 — недостоверно", () => {
-  const allNo = S.computeProfile(fill(() => "N"), "female"); // L = 5, F = 3
+  const allNo = S.computeProfile(fill(() => "N")); // L = 5, F = 3
   assert.equal(allNo.validity.valid, false);
   assert.deepEqual(allNo.validity.checks.filter((c) => c.exceeded).map((c) => c.scale), ["L"]);
-  const allYes = S.computeProfile(fill(() => "Y"), "male"); // L = 0, F = 12
+  const allYes = S.computeProfile(fill(() => "Y")); // L = 0, F = 12
   assert.equal(allYes.validity.valid, false);
   assert.deepEqual(allYes.validity.checks.filter((c) => c.exceeded).map((c) => c.scale), ["F"]);
   assert.equal(S.validity({ L: 4, F: 6 }).valid, true); // ровно на границе — ещё достоверно
   assert.equal(S.validity({ L: 5, F: 7 }).checks.every((c) => c.exceeded && c.reason), true);
-  assert.equal(S.computeProfile([], "male").validity.valid, true);
+  assert.equal(S.computeProfile([]).validity.valid, true);
 });
 
 test("по умолчанию Т считаются по профильному листу, как на psytests.org", () => {
   assert.equal(S.T_METHOD, "sheet");
-  // psytests.org/result?v=mmuBQ4TZeYBMH4gf (женщина): баллы с поправкой K и их Т-баллы.
-  const cases = { L: [3, 63], F: [4, 57], K: [11, 63], "1": [13, 65], "2": [12, 63], "3": [16, 63], "4": [11, 56], "6": [4, 45], "7": [19, 70], "8": [16, 55], "9": [5, 43] };
-  for (const [s, [x, t]] of Object.entries(cases)) {
-    assert.equal(Math.round(S.tScore(s, x, "female").t), t, `шкала ${s}`);
-  }
+  assert.equal(S.tScore("F", 10).t, 78);
+  assert.equal(S.tScore("K", 0).t, 29);
 });
-
 test("профильный лист: за краем — продление по прямой с пометкой", () => {
-  const inside = S.tScore("7", 20, "male");
+  const inside = S.tScore("7", 20);
   assert.equal(inside.extrapolated, false);
   assert.equal(inside.t, 77);
-  const out = S.tScore("7", 30, "male"); // лист кончается на 27
+  const out = S.tScore("7", 30); // лист кончается на 27
   assert.equal(out.extrapolated, true);
   assert.ok(out.t > 107.3 && out.t < 125);
-  for (const sex of ["male", "female"]) for (const s of Object.keys(D.profileSheets[sex])) {
-    const a = D.profileSheets[sex][s].t;
-    for (let i = 1; i < a.length; i++) assert.ok(a[i] > a[i - 1], `${sex} ${s}[${i}]`);
+  for (const s of Object.keys(D.profileSheet)) {
+    const a = D.profileSheet[s].t;
+    for (let i = 1; i < a.length; i++) assert.ok(a[i] > a[i - 1], `${s}[${i}]`);
   }
 });
 
@@ -173,7 +144,7 @@ test("ключ psytests воспроизводит все 14 прогонов и
   ];
   const order = ["1","2","3","4","6","7","8","9","L","F","K"];
   for (const [p, raw, t] of runs) {
-    const prof = S.computeProfile(conv(p), "male");
+    const prof = S.computeProfile(conv(p));
     order.forEach((s, i) => {
       assert.equal(prof.raw[s], raw[i], `сырой ${s} для ${p.slice(0, 12)}…`);
       assert.equal(Math.round(prof.t[s]), t[i], `Т ${s} для ${p.slice(0, 12)}…`);
