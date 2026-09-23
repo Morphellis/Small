@@ -93,9 +93,9 @@
   }
 
   // ---------- форматирование ----------
-  function fmtT(t) {
+  function fmtT(t, extrapolated) {
     if (t === null) return "—";
-    return t.toFixed(2).replace("-", "−");
+    return (extrapolated ? "≈" : "") + t.toFixed(S.T_DIGITS).replace("-", "−");
   }
   function signed(v, digits) {
     const s = Math.abs(v).toFixed(digits);
@@ -231,11 +231,11 @@
       const corr = profile.corrected[s] !== profile.raw[s] || S.K_CORRECTED.includes(s)
         ? ` <small title="с поправкой K">(${profile.corrected[s]})</small>` : "";
       let d = "";
-      if (changed.has(s) && state.last.before.t[s] !== null && t !== null) d = signed(t - state.last.before.t[s], 2);
+      if (changed.has(s) && state.last.before.t[s] !== null && t !== null) d = signed(t - state.last.before.t[s], S.T_DIGITS);
       const over = profile.validity.checks.some((c) => c.scale === s && c.exceeded);
       const cls = [changed.has(s) ? "changed" : "", idx === 3 ? "grp" : "", over ? "invalid" : "", FOCUS.has(s) ? "" : "other"].join(" ").trim();
       const lvlTxt = lvl && lvl !== "norm" ? `<span class="lvl">${levelWord[lvl]}</span>` : "";
-      return `<tr class="${cls}" data-s="${s}"><td class="num t ${lvl ? "lv-" + lvl : ""}">${fmtT(t)}${lvlTxt}</td>` +
+      return `<tr class="${cls}" data-s="${s}"><td class="num t ${lvl ? "lv-" + lvl : ""}">${fmtT(t, profile.extrapolated[s])}${lvlTxt}</td>` +
         `<td class="num">${profile.raw[s]}${corr}</td><td class="name" title="${scaleLabel(s)}">${scaleLabel(s)}</td><td class="num d">${d}</td></tr>`;
     });
     rows.push(`<tr class="dk grp"><td class="num t">—</td><td class="num">${profile.dontKnow}</td><td class="name">?: Ответ «Не знаю»</td><td></td></tr>`);
@@ -269,7 +269,7 @@
     const cells = ORDER.map((s) => {
       const g = D.scaleInfo[s].group === "control" ? "ctrl" : "clin";
       const lvl = profile.level[s] ? "lv-" + profile.level[s] : "";
-      const t = profile.t[s] === null ? "—" : Math.round(profile.t[s]);
+      const t = profile.t[s] === null ? "—" : (profile.extrapolated[s] ? "≈" : "") + Math.round(profile.t[s]);
       const over = profile.validity.checks.some((c) => c.scale === s && c.exceeded) ? "invalid" : "";
       return `<div class="sc ${g} ${lvl} ${over} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}"><b>${s}</b><span>${t}</span><small>${profile.corrected[s]}</small></div>`;
     });

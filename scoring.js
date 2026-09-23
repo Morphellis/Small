@@ -33,6 +33,10 @@
   // Границы интерпретации: Т ≥ high — высокие значения, Т ≤ low — низкие.
   const THRESHOLDS = { high: 71, low: 39 };
 
+  // Перевод в Т: "sheet" — профильные листы, как на psytests.org (целые Т); "formula" — T = 50 + 10·(X − M)/SD.
+  const T_METHOD = "sheet";
+  const T_DIGITS = T_METHOD === "sheet" ? 0 : 2;
+
   // Для каждого вопроса: в какие шкалы и каким ответом он засчитывается.
   const QUESTION_KEYS = Array.from({ length: QUESTION_COUNT }, () => []);
   for (const scale of ORDER) {
@@ -83,10 +87,34 @@
   }
 
   // T = 50 + 10 * (X - M) / SD, M и SD из норм для выбранного пола.
-  function tScore(scale, x, sex) {
+  function tScoreFormula(scale, x, sex) {
     const i = D.norms.order.indexOf(scale);
     const n = D.norms[sex];
     return 50 + (10 * (x - n.M[i])) / n.SD[i];
+  }
+
+  // По профильному листу: значение из таблицы, за краем листа — продление по прямой.
+  function tScoreSheet(scale, x, sex) {
+    const table = D.profileSheets[sex][scale];
+    const last = table.from + table.t.length - 1;
+    if (x >= table.from && x <= last) return { t: table.t[x - table.from], extrapolated: false };
+    const n = table.t.length;
+    const xs = table.t.map((_, i) => table.from + i);
+    const mx = xs.reduce((s, v) => s + v, 0) / n;
+    const my = table.t.reduce((s, v) => s + v, 0) / n;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      num += (xs[i] - mx) * (table.t[i] - my);
+      den += (xs[i] - mx) * (xs[i] - mx);
+    }
+    const edge = x < table.from ? table.from : last;
+    return { t: table.t[edge - table.from] + (num / den) * (x - edge), extrapolated: true };
+  }
+
+  function tScore(scale, x, sex, method) {
+    if ((method || T_METHOD) === "formula") return { t: tScoreFormula(scale, x, sex), extrapolated: false };
+    return tScoreSheet(scale, x, sex);
   }
 
   function levelOf(t) {
@@ -99,7 +127,9 @@
    * Полный расчёт профиля. sex: "male" | "female" | null (без пола Т-баллы не считаются).
    * Возвращает сырые, с поправкой K и Т-баллы по всем шкалам.
    */
-  function computeProfile(answers, sex) {
+  function computeProfile(answers, sex, method) {
+    const m = method || T_METHOD;
+    const extrapolated = {};
     const { raw, dontKnow, answered } = rawScores(answers);
     const add = kCorrection(raw.K);
     const corrected = {};
@@ -108,14 +138,17 @@
     for (const s of ORDER) {
       corrected[s] = raw[s] + (add[s] || 0);
       if (sex === "male" || sex === "female") {
-        t[s] = tScore(s, corrected[s], sex);
+        const r = tScore(s, corrected[s], sex, m);
+        t[s] = r.t;
+        extrapolated[s] = r.extrapolated;
         level[s] = levelOf(t[s]);
       } else {
         t[s] = null;
+        extrapolated[s] = false;
         level[s] = null;
       }
     }
-    return { sex: sex || null, raw, kAdd: add, corrected, t, level, dontKnow, answered, validity: validity(raw) };
+    return { sex: sex || null, method: m, raw, kAdd: add, corrected, t, extrapolated, level, dontKnow, answered, validity: validity(raw) };
   }
 
   // Достоверность по сырым L и F: { valid, checks: [{ scale, raw, limit, exceeded, reason }] }.
@@ -159,6 +192,8 @@
     K_FACTORS,
     VALIDITY_LIMITS,
     THRESHOLDS,
+    T_METHOD,
+    T_DIGITS,
     QUESTION_KEYS,
     normalizeAnswers,
     rawScores,
