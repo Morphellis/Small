@@ -279,7 +279,6 @@
 
   }
 
-  let wasValid = true;
   function renderValidity() {
     const v = profile.validity;
     const u = (c) => (c.unit ? " " + c.unit : "");
@@ -296,9 +295,7 @@
       el.validityBody.innerHTML =
         bad.map((c) => `<p><b>${c.scale} = ${c.value}${u(c)}</b> (${D.scaleInfo[c.scale].name.toLowerCase()}, допустимо не больше ${c.limit}${u(c)}): ${c.reason}.</p>`).join("") +
         `<p>По методике ${TEST.title} при таком результате шкалы не интерпретируют, а тест проходят заново.</p>`;
-      if (wasValid) el.validity.open = !window.matchMedia("(max-width: 900px)").matches;
     }
-    wasValid = v.valid;
   }
 
   function renderStrip() {
@@ -491,8 +488,10 @@
 
   function updateScrollMargin() {
     const h = el.panel.getBoundingClientRect().height;
-    // Слишком высокая панель (телефон с развёрнутыми графиком и таблицей) не прилипает, чтобы не закрывать вопросы.
-    el.panel.classList.toggle("unstick", h > window.innerHeight * 0.6);
+    // На телефоне слишком высокая панель (развёрнуты график и таблица) не прилипает, чтобы не закрывать вопросы.
+    // На широком экране панель прилипает всегда.
+    const narrow = window.matchMedia("(max-width: 900px)").matches;
+    el.panel.classList.toggle("unstick", narrow && h > window.innerHeight * 0.6);
     for (const li of el.questions.children) li.style.scrollMarginTop = h + 12 + "px";
   }
 
@@ -548,6 +547,8 @@
     el.toggleChart.addEventListener("click", () => { state.showChart = !state.showChart; renderLayout(); persist(); });
     el.toggleTable.addEventListener("click", () => { state.showTable = !state.showTable; renderLayout(); persist(); });
     el.resetBtn.addEventListener("click", resetAll);
+    // Пояснение к достоверности открывается поверх вопросов — закрываем его кликом мимо.
+    document.addEventListener("click", (e) => { if (el.validity.open && !el.validity.contains(e.target)) el.validity.open = false; });
 
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;

@@ -6,16 +6,12 @@
   <meta name="color-scheme" content="light dark">
   <title>СМОЛ</title>
   <meta name="description" content="Тренажёр тестов СМОЛ (Мини-Мульт, 71 вопрос) и СМИЛ (566 утверждений): шкалы и профиль пересчитываются после каждого ответа.">
-  <link rel="stylesheet" href="styles.css?v=16">
+  <link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
   <section class="panel" id="panel" aria-label="Баллы">
     <div class="wrap">
       <div class="panel-head">
-        <div class="test-switch" role="tablist" aria-label="Тест">
-          <button type="button" role="tab" data-test="smol" title="Мини-Мульт, 71 вопрос">СМОЛ</button>
-          <button type="button" role="tab" data-test="smil" title="Собчик, 566 утверждений">СМИЛ</button>
-        </div>
         <span class="spacer"></span>
         <span class="hint" id="hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · <kbd>3</kbd> Не знаю · <kbd>0</kbd> снять · <kbd>↑</kbd><kbd>↓</kbd></span>
         <button type="button" class="btn btn-key" id="keyBtn" aria-pressed="false"><span class="long">Посмотреть правильные ответы</span><span class="short">Ключ</span></button>
@@ -23,6 +19,10 @@
         <button type="button" class="btn btn-ghost" id="toggleTable" aria-pressed="true">Таблица</button>
       </div>
       <div class="panel-body" id="panelBody">
+        <div class="test-switch" role="tablist" aria-label="Тест">
+          <button type="button" role="tab" data-test="smol" title="Мини-Мульт"><b>СМОЛ</b><small>71 вопрос</small></button>
+          <button type="button" role="tab" data-test="smil" title="Л. Н. Собчик"><b>СМИЛ</b><small>566 утверждений</small></button>
+        </div>
         <div class="chart-wrap" id="chartWrap">
           <div class="view-switch" role="tablist" aria-label="Вид профиля">
             <button type="button" role="tab" data-view="bars">Шкалы</button>
@@ -66,12 +66,12 @@
 
   </main>
 
-  <script src="data.js?v=16"></script>
-  <script src="scoring.js?v=16"></script>
-  <script src="hints.js?v=16"></script>
-  <script src="smil-data.js?v=16"></script>
-  <script src="smil-scoring.js?v=16"></script>
-  <script src="smil-hints.js?v=16"></script>
-  <script src="app.js?v=16"></script>
+  <script src="data.js?v=17"></script>
+  <script src="scoring.js?v=17"></script>
+  <script src="hints.js?v=17"></script>
+  <script src="smil-data.js?v=17"></script>
+  <script src="smil-scoring.js?v=17"></script>
+  <script src="smil-hints.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
