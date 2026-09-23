@@ -25,6 +25,7 @@
    * Правила СМИЛ (L ≥ 70 Т, F > 80 Т, |F − K| > 11) к СМОЛ не относятся: там другие по длине шкалы.
    */
   const VALIDITY_LIMITS = { L: 4, F: 6 }; // недостоверно, если сырой балл больше
+  const VALIDITY_RULE = "По правилам СМОЛ результат недостоверен, если сырой балл L больше 4 или F больше 6.";
   const VALIDITY_REASONS = {
     L: "много ответов, в которых человек выставляет себя лучше, чем бывает у людей на самом деле (никогда не сердится, не сплетничает, все знакомые нравятся). Ответы выглядят неискренними",
     F: "много редких, нетипичных ответов, которые почти не дают обычные люди. Так бывает при невнимательных или случайных ответах, непонимании вопросов или намеренном преувеличении своих проблем"
@@ -149,11 +150,11 @@
     return { method: m, raw, kAdd: add, corrected, t, extrapolated, level, dontKnow, answered, validity: validity(raw) };
   }
 
-  // Достоверность по сырым L и F: { valid, checks: [{ scale, raw, limit, exceeded, reason }] }.
+  // Достоверность по сырым L и F: { valid, checks: [{ scale, raw, value, unit, limit, exceeded, reason }] }.
   function validity(raw) {
     const checks = Object.keys(VALIDITY_LIMITS).map((scale) => {
       const exceeded = raw[scale] > VALIDITY_LIMITS[scale];
-      return { scale, raw: raw[scale], limit: VALIDITY_LIMITS[scale], exceeded, reason: exceeded ? VALIDITY_REASONS[scale] : null };
+      return { scale, raw: raw[scale], value: raw[scale], unit: "", limit: VALIDITY_LIMITS[scale], exceeded, reason: exceeded ? VALIDITY_REASONS[scale] : null };
     });
     return { valid: checks.every((c) => !c.exceeded), checks };
   }
@@ -189,6 +190,7 @@
     K_CORRECTION_MODE,
     K_FACTORS,
     VALIDITY_LIMITS,
+    VALIDITY_RULE,
     THRESHOLDS,
     T_METHOD,
     T_DIGITS,

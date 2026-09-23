@@ -1,19 +1,45 @@
 (function () {
   "use strict";
 
-  const D = window.SMOL_DATA;
-  const S = window.SMOL_SCORING;
+  /*
+   * Тесты. У каждого свои данные, подсчёт и хранилище ответов, поэтому ответы СМОЛ и СМИЛ не смешиваются.
+   * focus — шкалы, на которых делаем упор: только по ним показываем влияние ответа, ключ и подсветку;
+   * остальные считаются и видны в таблице, но приглушены.
+   * hints — свой список «правильных» ответов; keyHighlight — подсвечивать ли ответы по ключу, пока список пуст.
+   * bars — диапазон Т на полосах профиля, band — коридор нормы на графике.
+   */
+  const TESTS = {
+    smol: {
+      title: "СМОЛ", D: window.SMOL_DATA, S: window.SMOL_SCORING, storageKey: "smol-trainer-v1",
+      focus: ["L", "F", "K", "1", "2", "7", "8"], hints: window.SMOL_HINTS || {}, keyHighlight: true,
+      bars: { min: 10, max: 110 }, band: [40, 70]
+    },
+    smil: {
+      title: "СМИЛ", D: window.SMIL_DATA, S: window.SMIL_SCORING, storageKey: "smil-trainer-v1",
+      focus: ["L", "F", "K", "1", "2", "7", "8"], hints: window.SMIL_HINTS || {}, keyHighlight: false,
+      bars: { min: 0, max: 120 }, band: [30, 70]
+    }
+  };
+  const TEST_KEY = "trainer-test";
+  const TEST_ID = (() => {
+    const h = location.hash.slice(1);
+    if (TESTS[h]) return h;
+    try { const v = localStorage.getItem(TEST_KEY); if (TESTS[v]) return v; } catch (e) { /* без хранилища — СМОЛ */ }
+    return "smol";
+  })();
+  const TEST = TESTS[TEST_ID];
+
+  const D = TEST.D;
+  const S = TEST.S;
   const N = S.QUESTION_COUNT;
   const ORDER = S.ORDER;
-  const STORAGE_KEY = "smol-trainer-v1";
+  const STORAGE_KEY = TEST.storageKey;
   const LETTER = { Y: "Д", N: "Н", "?": "?" };
   const WORD = { Y: "Да", N: "Нет", "?": "Не знаю" };
-  // Шкалы, на которых делаем упор: только по ним показываем влияние ответа, ключ и подсветку.
-  // Остальные (3, 4, 6, 9) считаются и видны в таблице, но приглушены.
-  const FOCUS = new Set(["L", "F", "K", "1", "2", "7", "8"]);
-  // Свой список «правильных» ответов (hints.js). Пустой — подсвечиваются ответы по ключу теста.
-  const HINTS = window.SMOL_HINTS || {};
+  const FOCUS = new Set(TEST.focus);
+  const HINTS = TEST.hints;
   const USE_HINTS = Object.keys(HINTS).length > 0;
+  const KEY_HIGHLIGHT = !USE_HINTS && TEST.keyHighlight;
   const scalesWord =(list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
   const byScales = (list) => (list.length > 1 ? "по шкалам " : "по шкале ") + list.join(", ");
 
@@ -25,6 +51,7 @@
     chart: $("chart"),
     bars: $("bars"),
     viewButtons: document.querySelectorAll(".view-switch button"),
+    testButtons: document.querySelectorAll(".test-switch button"),
     tableWrap: $("tableWrap"),
     scoreBody: $("scoreBody"),
     validity: $("validity"),
@@ -128,11 +155,11 @@
           return `<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${scalesWord(list)}</span>`;
         }).filter(Boolean);
         keyBox.innerHTML = `<span class="key-label">Ключ:</span>` + parts.join(`<span class="sep">·</span>`);
-        if (!USE_HINTS) for (const a of new Set(keys.map((k) => k.answer))) li.querySelector(`button[data-a="${a}"]`).classList.add("scores-key");
+        if (KEY_HIGHLIGHT) for (const a of new Set(keys.map((k) => k.answer))) li.querySelector(`button[data-a="${a}"]`).classList.add("scores-key");
       } else {
         keyBox.innerHTML = `<span class="key-label">Ключ:</span><span class="none">не влияет на отслеживаемые шкалы</span>`;
       }
-      // Свой список «правильных» ответов из hints.js: подсвечивается только он.
+      // Свой список «правильных» ответов (hints.js, smil-hints.js): подсвечивается только он.
       const hint = HINTS[i + 1];
       if (USE_HINTS && WORD[hint]) {
         keyBox.insertAdjacentHTML("afterbegin", `<span class="key-label">Ответ:</span><b class="ans-${hint === "?" ? "dk" : hint}">«${WORD[hint]}»</b><span class="sep">·</span>`);
@@ -244,6 +271,10 @@
         `<td class="num">${profile.raw[s]}${corr}</td><td class="name" title="${scaleLabel(s)}">${scaleLabel(s)}</td><td class="num d">${d}</td></tr>`;
     });
     rows.push(`<tr class="dk grp"><td class="num t">—</td><td class="num">${profile.dontKnow}</td><td class="name">?: Ответ «Не знаю»</td><td></td></tr>`);
+    if (profile.controlTotal) {
+      rows.push(`<tr class="dk"><td class="num t">—</td><td class="num">${profile.controlCorrect}<small> из ${profile.controlTotal}</small></td>` +
+        `<td class="name" title="Пункты «Номер данного пункта следует обвести кружочком»: правильно отвечать «Не знаю»">Контрольные пункты</td><td></td></tr>`);
+    }
     el.scoreBody.innerHTML = rows.join("");
 
   }
@@ -251,19 +282,20 @@
   let wasValid = true;
   function renderValidity() {
     const v = profile.validity;
-    const counts = v.checks.map((c) => `${c.scale} ${c.raw} из ${c.limit}`).join(" · ");
+    const u = (c) => (c.unit ? " " + c.unit : "");
+    // СМОЛ сравнивает сырые баллы («L 2 из 4»), СМИЛ — Т-баллы («L 49 Т, до 70»).
+    const counts = v.checks.map((c) => (c.unit ? `${c.scale} ${c.value}${u(c)}, до ${c.limit}` : `${c.scale} ${c.value} из ${c.limit}`)).join(" · ");
     el.validity.classList.toggle("bad", !v.valid);
     if (v.valid) {
       el.validitySum.innerHTML = `<b>✓ Результат достоверен</b><span class="v-counts">допустимо: ${counts}</span>`;
-      el.validityBody.innerHTML =
-        "<p>По правилам СМОЛ результат недостоверен, если сырой балл L больше 4 или F больше 6. Сейчас оба в пределах.</p>";
+      el.validityBody.innerHTML = `<p>${S.VALIDITY_RULE} Сейчас ${v.checks.length > 2 ? "все" : "оба"} в пределах.</p>`;
       el.validity.open = false;
     } else {
       const bad = v.checks.filter((c) => c.exceeded);
-      el.validitySum.innerHTML = `<b>✗ Результат недостоверен</b><span class="v-counts">${bad.map((c) => `${c.scale} = ${c.raw}, допустимо до ${c.limit}`).join(" · ")}</span>`;
+      el.validitySum.innerHTML = `<b>✗ Результат недостоверен</b><span class="v-counts">${bad.map((c) => `${c.scale} = ${c.value}${u(c)}, допустимо до ${c.limit}`).join(" · ")}</span>`;
       el.validityBody.innerHTML =
-        bad.map((c) => `<p><b>${c.scale} = ${c.raw}</b> (${D.scaleInfo[c.scale].name.toLowerCase()}, допустимо не больше ${c.limit}): ${c.reason}.</p>`).join("") +
-        "<p>По методике СМОЛ при таком результате шкалы не интерпретируют, а тест проходят заново.</p>";
+        bad.map((c) => `<p><b>${c.scale} = ${c.value}${u(c)}</b> (${D.scaleInfo[c.scale].name.toLowerCase()}, допустимо не больше ${c.limit}${u(c)}): ${c.reason}.</p>`).join("") +
+        `<p>По методике ${TEST.title} при таком результате шкалы не интерпретируют, а тест проходят заново.</p>`;
       if (wasValid) el.validity.open = !window.matchMedia("(max-width: 900px)").matches;
     }
     wasValid = v.valid;
@@ -279,13 +311,17 @@
       return `<div class="sc ${g} ${lvl} ${over} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}"><b>${s}</b><span>${t}</span><small>${profile.corrected[s]}</small></div>`;
     });
     cells.push(`<div class="sc" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
+    el.strip.style.gridTemplateColumns = `repeat(${cells.length}, minmax(0, 1fr))`;
     el.strip.innerHTML = cells.join("");
   }
 
-  // Вид «Шкалы»: полосы от 10 до 110 Т по клеткам в 5 Т, как в результатах psytests.org.
+  // Вид «Шкалы»: полосы по клеткам в 5 Т, как в результатах psytests.org (СМОЛ — от 10 до 110 Т, СМИЛ — от 0 до 120 Т).
   function renderBars() {
     const changed = new Set(state.last ? state.last.changed : []);
-    const T_MIN = 10, T_MAX = 110;
+    const T_MIN = TEST.bars.min, T_MAX = TEST.bars.max;
+    const pct = (t) => (((t - T_MIN) / (T_MAX - T_MIN)) * 100).toFixed(2) + "%";
+    const { low, high } = S.THRESHOLDS;
+    el.bars.style.setProperty("--cell", (500 / (T_MAX - T_MIN)).toFixed(4) + "%");
     const row = (s, label) => {
       const t = profile.t[s];
       const lvl = profile.level[s];
@@ -301,13 +337,14 @@
         `<span class="bar-track"><span class="bar-fill" style="width:${w.toFixed(1)}%"></span></span>` +
         `<span class="bar-val">${val}${d}</span></div>`;
     };
-    const clinical = ["1", "2", "3", "4", "6", "7", "8", "9"].map((s) => row(s, `${s}. ${D.scaleInfo[s].title}`)).join("");
-    const control = ["L", "F", "K"].map((s) => row(s, `${D.scaleInfo[s].title} (${s})`)).join("");
+    const group = (g) => ORDER.filter((s) => D.scaleInfo[s].group === g);
+    const clinical = group("clinical").map((s) => row(s, `${s}. ${D.scaleInfo[s].title}`)).join("");
+    const control = group("control").map((s) => row(s, `${D.scaleInfo[s].title} (${s})`)).join("");
     el.bars.innerHTML =
       `<div class="bars-h">Базисные шкалы</div>${clinical}<div class="bars-h">Контрольные шкалы</div>${control}` +
       `<div class="bar-row bar-axis"><span class="bar-name"></span><span class="bar-track axis">` +
-      `<i style="left:0"><b class="lo">[10</b></i><i class="c" style="left:30%"><b class="lo">39]</b><b class="mid">[40</b></i>` +
-      `<i class="c" style="left:60%"><b class="mid">69]</b><b class="hi">[70</b></i><i style="right:0"><b class="hi">110]</b></i></span><span class="bar-val"></span></div>` +
+      `<i style="left:0"><b class="lo">[${T_MIN}</b></i><i class="c" style="left:${pct(low + 1)}"><b class="lo">${low}]</b><b class="mid">[${low + 1}</b></i>` +
+      `<i class="c" style="left:${pct(high)}"><b class="mid">${high - 1}]</b><b class="hi">[${high}</b></i><i style="right:0"><b class="hi">${T_MAX}]</b></i></span><span class="bar-val"></span></div>` +
       `<div class="bars-legend"><span class="lo">низкие</span> ⇒ <span class="mid">средние</span> ⇒ <span class="hi">высокие значения</span></div>`;
   }
 
@@ -322,13 +359,14 @@
     const css = (v) => `var(${v})`;
     const out = [];
 
-    out.push(`<rect x="${m.l}" y="${y(70)}" width="${pw}" height="${y(40) - y(70)}" fill="${css("--band")}"/>`);
+    const [bandLo, bandHi] = TEST.band;
+    out.push(`<rect x="${m.l}" y="${y(bandHi)}" width="${pw}" height="${y(bandLo) - y(bandHi)}" fill="${css("--band")}"/>`);
     for (let t = 0; t <= 120; t += 5) {
       const strong = t % 10 === 0;
       out.push(`<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${css(strong ? "--grid-strong" : "--grid")}" stroke-width="${strong ? 0.8 : 0.6}"/>`);
       if (strong) out.push(`<text x="${m.l - 6}" y="${y(t) + 3.5}" text-anchor="end">${t}</text>`);
     }
-    for (const t of [40, 70]) {
+    for (const t of TEST.band) {
       out.push(`<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${css("--muted")}" stroke-width="1" stroke-dasharray="5 4"/>`);
     }
     const sepX = (x(2) + x(3)) / 2;
@@ -369,6 +407,11 @@
     el.chart.style.display = state.profileView === "chart" ? "" : "none";
     for (const b of el.viewButtons) {
       const on = b.dataset.view === state.profileView;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", String(on));
+    }
+    for (const b of el.testButtons) {
+      const on = b.dataset.test === TEST_ID;
       b.classList.toggle("on", on);
       b.setAttribute("aria-selected", String(on));
     }
@@ -454,7 +497,7 @@
   }
 
   function resetAll() {
-    if (!window.confirm("Сбросить все ответы и историю?")) return;
+    if (!window.confirm(`Сбросить все ответы и историю ${TEST.title}?`)) return;
     state.answers = new Array(N).fill(null);
     state.history = Array.from({ length: N }, () => []);
     state.last = null;
@@ -491,6 +534,15 @@
       scrollToQuestion(i, true);
     });
 
+    // Смена теста: запоминаем выбор и перезагружаем страницу — у каждого теста свои вопросы и свои сохранённые ответы.
+    for (const b of el.testButtons) {
+      b.addEventListener("click", () => {
+        if (b.dataset.test === TEST_ID) return;
+        try { localStorage.setItem(TEST_KEY, b.dataset.test); } catch (e) { /* выбор передаётся через адрес */ }
+        history.replaceState(null, "", "#" + b.dataset.test);
+        location.reload();
+      });
+    }
     el.keyBtn.addEventListener("click", () => { state.keyMode = !state.keyMode; renderLayout(); persist(); });
     for (const b of el.viewButtons) b.addEventListener("click", () => { state.profileView = b.dataset.view; renderLayout(); persist(); });
     el.toggleChart.addEventListener("click", () => { state.showChart = !state.showChart; renderLayout(); persist(); });
@@ -526,6 +578,7 @@
     window.addEventListener("resize", updateScrollMargin);
   }
 
+  document.title = TEST.title;
   buildQuestions();
   buildSheet();
   restore();

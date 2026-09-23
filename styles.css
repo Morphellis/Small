@@ -170,7 +170,13 @@ kbd {
 .chart-wrap .xl { font-size: 12px; font-weight: 600; fill: var(--text); }
 .chart-wrap .empty { font-size: 14px; fill: var(--muted); }
 
-/* переключатель «Шкалы | График» */
+/* переключатели «СМОЛ | СМИЛ» и «Шкалы | График» */
+.test-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.test-switch button { padding: 3px 12px; border: 0; background: var(--surface-2); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; color: var(--muted); }
+.test-switch button + button { border-left: 1px solid var(--border); }
+.test-switch button.on { background: var(--text); color: var(--surface); }
+.test-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 .view-switch { display: inline-flex; margin: 0 0 6px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .view-switch button { padding: 3px 12px; border: 0; background: transparent; font-size: 13px; cursor: pointer; color: var(--muted); }
 .view-switch button + button { border-left: 1px solid var(--border); }
@@ -186,10 +192,10 @@ kbd {
 .bar-name { text-align: right; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-track { position: relative; height: 17px; background: var(--bar-track); }
 .bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--bar-mid); }
-/* разделители клеток по 5 Т поверх заливки */
+/* разделители клеток по 5 Т поверх заливки (--cell — ширина клетки, задаётся из app.js под диапазон теста) */
 .bar-track::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(to right, transparent 0 calc(5% - 1.5px), var(--surface) calc(5% - 1.5px) 5%);
+  background: repeating-linear-gradient(to right, transparent 0 calc(var(--cell, 5%) - 1.5px), var(--surface) calc(var(--cell, 5%) - 1.5px) var(--cell, 5%));
 }
 .bar-row.is-out .bar-fill { background: var(--bar-out); }
 .bar-val { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
