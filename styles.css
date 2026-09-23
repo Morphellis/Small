@@ -248,6 +248,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   position: absolute; top: calc(100% + 4px); left: -1px; right: -1px; z-index: 20;
   padding: 4px 10px 6px; border: 1px solid var(--key); border-radius: 6px;
   background: var(--surface); box-shadow: var(--shadow);
+  max-height: 60vh; overflow-y: auto;
 }
 .validity.bad .validity-body { border-color: var(--hl); }
 .validity-body p { margin: 4px 0; }
@@ -255,7 +256,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .validity.bad summary b { color: var(--hl); }
 .validity.bad .v-counts { color: var(--hl); }
 
-.strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; padding-bottom: 4px; }
+.strip { display: grid; grid-template-columns: repeat(var(--n, 12), minmax(0, 1fr)); gap: 3px; padding-bottom: 4px; }
 .strip .sc { padding: 2px 0; border-radius: 5px; background: var(--surface-2); text-align: center; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .strip .sc b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
 .strip .sc span { display: block; font-size: 14px; font-weight: 650; }
@@ -272,7 +273,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .hint { margin-right: 6px; font-size: 12px; color: var(--muted); }
 .toast { margin-left: auto; font-size: 13px; color: var(--key); }
 .toast:empty { display: none; }
-.btn-key .short { display: none; }
+.btn-key .short, .btn-reset .short { display: none; }
 
 /* ---------- вопросы ---------- */
 .questions { list-style: none; margin: 12px 0 0; padding: 0; }
@@ -389,7 +390,10 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 
 /* ---------- узкие экраны ---------- */
 @media (max-width: 900px) {
-  .panel-body, .panel-body.no-chart { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "switch" "chart" "table" "foot"; }
+  /* планшет: плитки тестов в ряд сверху, профиль и таблица рядом */
+  .panel-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "switch switch" "chart table" "chart foot"; }
+  .panel-body.no-chart { grid-template-columns: minmax(0, 1fr); grid-template-areas: "switch" "table" "foot"; }
+  .bar-row { grid-template-columns: minmax(0, 44%) minmax(0, 1fr) 34px; gap: 6px; }
   .test-switch { flex-direction: row; padding: 0 0 8px; }
   .test-switch button { flex: 1; display: flex; align-items: baseline; gap: 8px; padding: 6px 12px; }
   .test-switch button b { font-size: 16px; }
@@ -397,16 +401,25 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .hint { display: none; }
 }
 
+/* телефон: всё в один столбец */
+@media (max-width: 640px) {
+  .panel-body, .panel-body.no-chart { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "switch" "chart" "table" "foot"; }
+}
+
+@media (max-width: 560px) {
+  .strip { grid-template-columns: repeat(var(--n2, 6), minmax(0, 1fr)); }
+}
+
 @media (max-width: 640px) {
   body { font-size: 14.5px; }
   .panel-head { padding: 6px 0 4px; gap: 4px 6px; }
   .panel-meta { display: none; }
   .btn { padding: 3px 8px; font-size: 12.5px; }
-  .btn-key .long { display: none; }
-  .btn-key .short { display: inline; }
-  .test-switch button { padding: 5px 10px; gap: 6px; }
+  .btn-key .long, .btn-reset .long { display: none; }
+  .btn-key .short, .btn-reset .short { display: inline; }
+  .test-switch button { display: block; padding: 5px 8px; text-align: center; }
   .test-switch button b { font-size: 15px; }
-  .test-switch button small { font-size: 11px; }
+  .test-switch button small { margin-top: 1px; font-size: 11px; }
   .panel-foot { padding: 4px 0 6px; gap: 4px; }
   .toast { flex-basis: 100%; margin-left: 0; }
   .chart-wrap svg { max-height: 220px; }
@@ -414,7 +427,30 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .bars { font-size: 12px; }
   .q { grid-template-columns: 26px minmax(0, 1fr); padding: 8px 8px; }
   .q-btns { grid-column: 2; }
-  .q-btns button { min-width: 64px; padding: 6px 10px; }
+  .q-btns button { min-width: 64px; min-height: 42px; padding: 6px 10px; }
+}
+
+/* телефон (узкий или в альбомной ориентации): плашка достоверности и сброс в одну строку */
+@media (max-width: 640px), (max-height: 500px) {
+  .panel-foot { position: relative; align-items: flex-start; }
+  .validity { flex: 1 1 0; min-width: 0; position: static; }
+  .validity summary { padding: 3px 8px; }
+  .validity-body { top: calc(100% - 2px); left: 0; right: 0; }
+  .btn-reset { flex: none; align-self: stretch; }
+}
+
+/* сенсорные экраны: кнопки ответа под палец */
+@media (pointer: coarse) {
+  .q-btns button { min-height: 42px; }
+}
+
+/* низкий экран (телефон в альбомной ориентации): панель поплотнее */
+@media (max-height: 500px) {
+  .panel-head { padding: 4px 0 3px; }
+  .test-switch { padding-bottom: 4px; }
+  .test-switch button { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 3px 10px; }
+  .test-switch button b { font-size: 15px; }
+  .panel-foot { padding: 3px 0 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

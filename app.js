@@ -91,9 +91,10 @@
   }
 
   function restore() {
-    const narrow = window.matchMedia("(max-width: 640px)").matches;
-    state.showChart = !narrow;
-    state.showTable = !narrow;
+    // На телефоне (узкий экран или альбомная ориентация) по умолчанию только компактная полоска Т-баллов.
+    const compact = window.matchMedia("(max-width: 640px), (max-height: 500px)").matches;
+    state.showChart = !compact;
+    state.showTable = !compact;
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (e) { saved = null; }
     if (!saved) return;
@@ -308,7 +309,9 @@
       return `<div class="sc ${g} ${lvl} ${over} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}"><b>${s}</b><span>${t}</span><small>${profile.corrected[s]}</small></div>`;
     });
     cells.push(`<div class="sc" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
-    el.strip.style.gridTemplateColumns = `repeat(${cells.length}, minmax(0, 1fr))`;
+    // В один ряд на широком экране, в два — на узком (см. styles.css), иначе трёхзначные Т не помещаются.
+    el.strip.style.setProperty("--n", cells.length);
+    el.strip.style.setProperty("--n2", Math.ceil(cells.length / 2));
     el.strip.innerHTML = cells.join("");
   }
 
