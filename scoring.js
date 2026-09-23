@@ -35,13 +35,17 @@
 
   // Перевод в Т: "sheet" — профильные листы, как на psytests.org (целые Т); "formula" — T = 50 + 10·(X − M)/SD.
   const T_METHOD = "sheet";
+
+  // Ключ: "psytests" — как считает psytests.org (восстановлен по их результатам), "classic" — ключ из ТЗ.
+  const KEY_VARIANT = "psytests";
+  const keyOf = (variant) => ((variant || KEY_VARIANT) === "classic" ? D.scalesClassic : D.scales);
   const T_DIGITS = T_METHOD === "sheet" ? 0 : 2;
 
   // Для каждого вопроса: в какие шкалы и каким ответом он засчитывается.
   const QUESTION_KEYS = Array.from({ length: QUESTION_COUNT }, () => []);
   for (const scale of ORDER) {
     for (const dir of ["yes", "no"]) {
-      for (const n of D.scales[scale][dir]) {
+      for (const n of keyOf()[scale][dir]) {
         QUESTION_KEYS[n - 1].push({ scale, answer: dir === "yes" ? "Y" : "N" });
       }
     }
@@ -58,13 +62,14 @@
     return out;
   }
 
-  function rawScores(answers) {
+  function rawScores(answers, keyVariant) {
+    const key = keyOf(keyVariant);
     const a = normalizeAnswers(answers);
     const raw = {};
     for (const scale of ORDER) {
       let n = 0;
-      for (const q of D.scales[scale].yes) if (a[q - 1] === "Y") n++;
-      for (const q of D.scales[scale].no) if (a[q - 1] === "N") n++;
+      for (const q of key[scale].yes) if (a[q - 1] === "Y") n++;
+      for (const q of key[scale].no) if (a[q - 1] === "N") n++;
       raw[scale] = n;
     }
     let dontKnow = 0;
@@ -76,12 +81,13 @@
     return { raw, dontKnow, answered };
   }
 
-  function kCorrection(k, mode) {
+  function kCorrection(k, mode, keyVariant) {
     const m = mode || K_CORRECTION_MODE;
+    const psy = (keyVariant || KEY_VARIANT) === "psytests" ? D.kCorrectionPsytests[String(k)] || {} : {};
     const add = {};
     for (const s of K_CORRECTED) {
       if (m === "formula") add[s] = Math.round(K_FACTORS[s] * k);
-      else add[s] = (D.kCorrection[String(k)] || D.kCorrection["0"])[s];
+      else add[s] = s in psy ? psy[s] : (D.kCorrection[String(k)] || D.kCorrection["0"])[s];
     }
     return add;
   }
@@ -127,11 +133,11 @@
    * Полный расчёт профиля. sex: "male" | "female" | null (без пола Т-баллы не считаются).
    * Возвращает сырые, с поправкой K и Т-баллы по всем шкалам.
    */
-  function computeProfile(answers, sex, method) {
+  function computeProfile(answers, sex, method, keyVariant) {
     const m = method || T_METHOD;
     const extrapolated = {};
-    const { raw, dontKnow, answered } = rawScores(answers);
-    const add = kCorrection(raw.K);
+    const { raw, dontKnow, answered } = rawScores(answers, keyVariant);
+    const add = kCorrection(raw.K, null, keyVariant);
     const corrected = {};
     const t = {};
     const level = {};
@@ -194,6 +200,7 @@
     THRESHOLDS,
     T_METHOD,
     T_DIGITS,
+    KEY_VARIANT,
     QUESTION_KEYS,
     normalizeAnswers,
     rawScores,
