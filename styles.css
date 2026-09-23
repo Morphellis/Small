@@ -326,7 +326,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .keymode .q-btns button.scores-key:not(.on) { background: var(--key-bg); }
 
 /* ---------- регистрационный лист ---------- */
-.sheet { margin: 24px 0 0; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.sheet { margin: 24px 0 40px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .sheet h2 { margin-bottom: 10px; }
 .sheet-scroll { overflow-x: auto; padding-bottom: 4px; }
 .sheet-grid { display: grid; grid-template-columns: repeat(30, 30px); gap: 3px; width: max-content; }
@@ -365,9 +365,6 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .legend li { display: inline-flex; align-items: center; gap: 4px; }
 .legend .cell { width: 22px; height: 22px; font-size: 11px; cursor: default; }
 
-.foot { margin: 20px 0 40px; font-size: 13px; color: var(--muted); }
-.foot p { margin: 6px 0; }
-.foot strong { color: var(--text); }
 
 /* ---------- узкие экраны ---------- */
 @media (max-width: 900px) {
