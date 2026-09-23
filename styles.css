@@ -296,6 +296,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .q-key .tag { white-space: nowrap; }
 .q-key .ans-Y { color: var(--yes); }
 .q-key .ans-N { color: var(--no); }
+.q-key .ans-dk { color: var(--dk); }
 .q-key .sep { color: var(--muted); }
 .q-impact { display: flex; flex-wrap: wrap; gap: 2px 6px; color: var(--text); font-size: 12.5px; }
 .q-impact .chip { white-space: nowrap; }

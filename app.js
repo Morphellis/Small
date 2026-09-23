@@ -11,7 +11,10 @@
   // Шкалы, на которых делаем упор: только по ним показываем влияние ответа, ключ и подсветку.
   // Остальные (3, 4, 6, 9) считаются и видны в таблице, но приглушены.
   const FOCUS = new Set(["L", "F", "K", "1", "2", "7", "8"]);
-  const scalesWord = (list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
+  // Свой список «правильных» ответов (hints.js). Пустой — подсвечиваются ответы по ключу теста.
+  const HINTS = window.SMOL_HINTS || {};
+  const USE_HINTS = Object.keys(HINTS).length > 0;
+  const scalesWord =(list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
   const byScales = (list) => (list.length > 1 ? "по шкалам " : "по шкале ") + list.join(", ");
 
   const $ = (id) => document.getElementById(id);
@@ -125,9 +128,15 @@
           return `<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${scalesWord(list)}</span>`;
         }).filter(Boolean);
         keyBox.innerHTML = `<span class="key-label">Ключ:</span>` + parts.join(`<span class="sep">·</span>`);
-        for (const a of new Set(keys.map((k) => k.answer))) li.querySelector(`button[data-a="${a}"]`).classList.add("scores-key");
+        if (!USE_HINTS) for (const a of new Set(keys.map((k) => k.answer))) li.querySelector(`button[data-a="${a}"]`).classList.add("scores-key");
       } else {
         keyBox.innerHTML = `<span class="key-label">Ключ:</span><span class="none">не влияет на отслеживаемые шкалы</span>`;
+      }
+      // Свой список «правильных» ответов из hints.js: подсвечивается только он.
+      const hint = HINTS[i + 1];
+      if (USE_HINTS && WORD[hint]) {
+        keyBox.insertAdjacentHTML("afterbegin", `<span class="key-label">Ответ:</span><b class="ans-${hint === "?" ? "dk" : hint}">«${WORD[hint]}»</b><span class="sep">·</span>`);
+        li.querySelector(`button[data-a="${hint}"]`).classList.add("scores-key");
       }
       frag.appendChild(li);
     });
