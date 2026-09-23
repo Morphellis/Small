@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <title>СМОЛ тренажёр</title>
   <meta name="description" content="Тренажёр теста СМОЛ (Мини-Мульт, 71 вопрос): шкалы и профиль пересчитываются после каждого ответа.">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <header class="topbar">
@@ -33,11 +33,16 @@
         <span class="spacer"></span>
         <span class="hint" id="hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · <kbd>3</kbd> Не знаю · <kbd>0</kbd> снять · <kbd>↑</kbd><kbd>↓</kbd></span>
         <button type="button" class="btn btn-key" id="keyBtn" aria-pressed="false"><span class="long">Посмотреть правильные ответы</span><span class="short">Ключ</span></button>
-        <button type="button" class="btn btn-ghost" id="toggleChart" aria-pressed="true">График</button>
+        <button type="button" class="btn btn-ghost" id="toggleChart" aria-pressed="true">Профиль</button>
         <button type="button" class="btn btn-ghost" id="toggleTable" aria-pressed="true">Таблица</button>
       </div>
       <div class="panel-body" id="panelBody">
         <div class="chart-wrap" id="chartWrap">
+          <div class="view-switch" role="tablist" aria-label="Вид профиля">
+            <button type="button" role="tab" data-view="bars">Шкалы</button>
+            <button type="button" role="tab" data-view="chart">График</button>
+          </div>
+          <div class="bars" id="bars"></div>
           <svg id="chart" viewBox="0 0 600 290" role="img" aria-label="Профиль Т-баллов"></svg>
         </div>
         <div class="table-wrap" id="tableWrap">
@@ -76,7 +81,7 @@
 
     <footer class="foot">
       <p><strong>Тренировочный инструмент. Не является психодиагностикой, результаты нельзя использовать для постановки диагноза.</strong></p>
-      <p>Подписи «высокое значение» — Т ≥ 71, «низкое значение» — Т ≤ 39; пунктир на графике — 40 и 70. «Не знаю» не засчитывается ни в одну шкалу. Результат недостоверен, если сырой балл L больше 4 или F больше 6 (правило СМОЛ), тогда тест проходят повторно. Поправка на K добавляется к шкалам 1, 4, 7, 8, 9 по таблице бланка.</p>
+      <p>Высокие значения — Т ≥ 70, низкие — Т ≤ 39, как на psytests.org; пунктир на графике — 40 и 70. «Не знаю» не засчитывается ни в одну шкалу. Результат недостоверен, если сырой балл L больше 4 или F больше 6 (правило СМОЛ), тогда тест проходят повторно. Поправка на K добавляется к шкалам 1, 4, 7, 8, 9 по таблице бланка.</p>
       <p>Перевод в Т-баллы — по профильным листам Козюли (отдельно для мужчин и женщин), как на psytests.org. Сырой балл для шкал 1, 4, 7, 8, 9 берётся с поправкой K. Значения сняты с листа с точностью около ±1 Т; «≈» — значение за краем листа.</p>
     </footer>
   </main>

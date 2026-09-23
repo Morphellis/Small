@@ -31,7 +31,7 @@
   };
 
   // Границы интерпретации: Т ≥ high — высокие значения, Т ≤ low — низкие.
-  const THRESHOLDS = { high: 71, low: 39 };
+  const THRESHOLDS = { high: 70, low: 39 }; // как на psytests.org: [10–39] низкие, [40–69] средние, [70–110] высокие
 
   // Перевод в Т: "sheet" — профильные листы, как на psytests.org (целые Т); "formula" — T = 50 + 10·(X − M)/SD.
   const T_METHOD = "sheet";

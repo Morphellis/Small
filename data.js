@@ -9,17 +9,17 @@
     scaleOrder: ["L", "F", "K", "1", "2", "3", "4", "6", "7", "8", "9"],
 
     scaleInfo: {
-      L: { code: "L", name: "Лжи", group: "control" },
-      F: { code: "F", name: "Достоверности", group: "control" },
-      K: { code: "K", name: "Коррекции", group: "control" },
-      "1": { code: "1", name: "Ипохондрии", group: "clinical" },
-      "2": { code: "2", name: "Депрессии", group: "clinical" },
-      "3": { code: "3", name: "Истерии", group: "clinical" },
-      "4": { code: "4", name: "Психопатии", group: "clinical" },
-      "6": { code: "6", name: "Паранойяльности", group: "clinical" },
-      "7": { code: "7", name: "Психастении", group: "clinical" },
-      "8": { code: "8", name: "Шизоидности", group: "clinical" },
-      "9": { code: "9", name: "Гипомании", group: "clinical" }
+      L: { code: "L", name: "Лжи", title: "Ложь", group: "control" },
+      F: { code: "F", name: "Достоверности", title: "Достоверность", group: "control" },
+      K: { code: "K", name: "Коррекции", title: "Коррекция", group: "control" },
+      "1": { code: "1", name: "Ипохондрии", title: "Ипохондрия", group: "clinical" },
+      "2": { code: "2", name: "Депрессии", title: "Депрессия", group: "clinical" },
+      "3": { code: "3", name: "Истерии", title: "Истерия", group: "clinical" },
+      "4": { code: "4", name: "Психопатии", title: "Психопатия", group: "clinical" },
+      "6": { code: "6", name: "Паранойяльности", title: "Паранойяльность", group: "clinical" },
+      "7": { code: "7", name: "Психастении", title: "Психастения", group: "clinical" },
+      "8": { code: "8", name: "Шизоидности", title: "Шизоидность", group: "clinical" },
+      "9": { code: "9", name: "Гипомании", title: "Гипомания", group: "clinical" }
     },
 
     /*

@@ -25,6 +25,8 @@
     panelBody: $("panelBody"),
     chartWrap: $("chartWrap"),
     chart: $("chart"),
+    bars: $("bars"),
+    viewButtons: document.querySelectorAll(".view-switch button"),
     tableWrap: $("tableWrap"),
     scoreBody: $("scoreBody"),
     validity: $("validity"),
@@ -50,7 +52,8 @@
     cur: 0,
     last: null, // { q, changed: [], before, after }
     showChart: true,
-    showTable: true
+    showTable: true,
+    profileView: "bars" // «Шкалы» (полосы, как на psytests.org) или «График»
   };
   let profile = null;
 
@@ -59,7 +62,7 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         sex: state.sex, answers: state.answers, history: state.history,
-        keyMode: state.keyMode, showChart: state.showChart, showTable: state.showTable
+        keyMode: state.keyMode, showChart: state.showChart, showTable: state.showTable, profileView: state.profileView
       }));
     } catch (e) { /* хранилище недоступно — работаем без него */ }
   }
@@ -75,6 +78,7 @@
     if (typeof saved.keyMode === "boolean") state.keyMode = saved.keyMode;
     if (typeof saved.showChart === "boolean") state.showChart = saved.showChart;
     if (typeof saved.showTable === "boolean") state.showTable = saved.showTable;
+    if (saved.profileView === "bars" || saved.profileView === "chart") state.profileView = saved.profileView;
   }
 
   function applySnapshot(s) {
@@ -277,6 +281,35 @@
     el.strip.innerHTML = cells.join("");
   }
 
+  // Вид «Шкалы»: полосы от 10 до 110 Т по клеткам в 5 Т, как в результатах psytests.org.
+  function renderBars() {
+    const changed = new Set(state.last ? state.last.changed : []);
+    const T_MIN = 10, T_MAX = 110;
+    const row = (s, label) => {
+      const t = profile.t[s];
+      const lvl = profile.level[s];
+      const w = t === null ? 0 : Math.max(0, Math.min(100, ((t - T_MIN) / (T_MAX - T_MIN)) * 100));
+      const cls = ["bar-row", lvl === "high" || lvl === "low" ? "is-out" : "is-mid", changed.has(s) ? "changed" : "", FOCUS.has(s) ? "" : "other"].join(" ");
+      let d = "";
+      if (changed.has(s) && state.last.before.t[s] !== null && t !== null) {
+        const diff = Math.round(t) - Math.round(state.last.before.t[s]);
+        if (diff) d = `<small>${signed(diff, 0)}</small>`;
+      }
+      const val = t === null ? "—" : (profile.extrapolated[s] ? "≈" : "") + String(Math.round(t)).replace("-", "−");
+      return `<div class="${cls}" title="${scaleLabel(s)}"><span class="bar-name">${label}</span>` +
+        `<span class="bar-track"><span class="bar-fill" style="width:${w.toFixed(1)}%"></span></span>` +
+        `<span class="bar-val">${val}${d}</span></div>`;
+    };
+    const clinical = ["1", "2", "3", "4", "6", "7", "8", "9"].map((s) => row(s, `${s}. ${D.scaleInfo[s].title}`)).join("");
+    const control = ["L", "F", "K"].map((s) => row(s, `${D.scaleInfo[s].title} (${s})`)).join("");
+    el.bars.innerHTML =
+      `<div class="bars-h">Базисные шкалы</div>${clinical}<div class="bars-h">Контрольные шкалы</div>${control}` +
+      `<div class="bar-row bar-axis"><span class="bar-name"></span><span class="bar-track axis">` +
+      `<i style="left:0"><b class="lo">[10</b></i><i class="c" style="left:30%"><b class="lo">39]</b><b class="mid">[40</b></i>` +
+      `<i class="c" style="left:60%"><b class="mid">69]</b><b class="hi">[70</b></i><i style="right:0"><b class="hi">110]</b></i></span><span class="bar-val"></span></div>` +
+      `<div class="bars-legend"><span class="lo">низкие</span> ⇒ <span class="mid">средние</span> ⇒ <span class="hi">высокие значения</span></div>`;
+  }
+
   function renderChart() {
     const W = 600, H = 290, m = { l: 34, r: 10, t: 12, b: 26 };
     const pw = W - m.l - m.r, ph = H - m.t - m.b;
@@ -337,6 +370,13 @@
     el.tableWrap.hidden = !state.showTable;
     el.strip.hidden = state.showTable;
     el.toggleChart.setAttribute("aria-pressed", String(state.showChart));
+    el.bars.hidden = state.profileView !== "bars";
+    el.chart.style.display = state.profileView === "chart" ? "" : "none";
+    for (const b of el.viewButtons) {
+      const on = b.dataset.view === state.profileView;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", String(on));
+    }
     el.toggleTable.setAttribute("aria-pressed", String(state.showTable));
     el.keyBtn.setAttribute("aria-pressed", String(state.keyMode));
     el.keyBtn.querySelector(".long").textContent = state.keyMode ? "Скрыть правильные ответы" : "Посмотреть правильные ответы";
@@ -364,6 +404,7 @@
     renderValidity();
     renderStrip();
     renderChart();
+    renderBars();
     renderSummary();
   }
 
@@ -484,6 +525,7 @@
     });
 
     el.keyBtn.addEventListener("click", () => { state.keyMode = !state.keyMode; renderLayout(); persist(); });
+    for (const b of el.viewButtons) b.addEventListener("click", () => { state.profileView = b.dataset.view; renderLayout(); persist(); });
     el.toggleChart.addEventListener("click", () => { state.showChart = !state.showChart; renderLayout(); persist(); });
     el.toggleTable.addEventListener("click", () => { state.showTable = !state.showTable; renderLayout(); persist(); });
     el.resetBtn.addEventListener("click", resetAll);
