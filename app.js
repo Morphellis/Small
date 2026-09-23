@@ -8,6 +8,11 @@
   const STORAGE_KEY = "smol-trainer-v1";
   const LETTER = { Y: "Д", N: "Н", "?": "?" };
   const WORD = { Y: "Да", N: "Нет", "?": "Не знаю" };
+  // Шкалы, на которых делаем упор: только по ним показываем влияние ответа, ключ и подсветку.
+  // Остальные (3, 4, 6, 9) считаются и видны в таблице, но приглушены.
+  const FOCUS = new Set(["L", "F", "K", "1", "2", "7", "8"]);
+  const scalesWord = (list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
+  const byScales = (list) => (list.length > 1 ? "по шкалам " : "по шкале ") + list.join(", ");
 
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -114,19 +119,19 @@
         `<div class="q-btns" role="group" aria-label="Ответ на вопрос ${i + 1}">` +
         `<button type="button" data-a="Y">Да</button><button type="button" data-a="N">Нет</button><button type="button" data-a="?">Не знаю</button></div>`;
       li.querySelector(".q-text").textContent = text;
-      const keys = S.QUESTION_KEYS[i];
+      const keys = S.QUESTION_KEYS[i].filter((k) => FOCUS.has(k.scale));
       const keyBox = li.querySelector(".q-key");
       if (keys.length) {
         // «Ключ: «Да» → шкалы F, 1 · «Нет» → шкалы 3, 6»
         const parts = ["Y", "N"].map((a) => {
           const list = keys.filter((k) => k.answer === a).map((k) => shortCode(k.scale));
           if (!list.length) return "";
-          return `<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${list.length > 1 ? "шкалы" : "шкала"} ${list.join(", ")}</span>`;
+          return `<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${scalesWord(list)}</span>`;
         }).filter(Boolean);
         keyBox.innerHTML = `<span class="key-label">Ключ:</span>` + parts.join(`<span class="sep">·</span>`);
         for (const a of new Set(keys.map((k) => k.answer))) li.querySelector(`button[data-a="${a}"]`).classList.add("scores-key");
       } else {
-        keyBox.innerHTML = `<span class="key-label">Ключ:</span><span class="none">не входит ни в одну шкалу</span>`;
+        keyBox.innerHTML = `<span class="key-label">Ключ:</span><span class="none">не влияет на отслеживаемые шкалы</span>`;
       }
       frag.appendChild(li);
     });
@@ -165,18 +170,46 @@
     li.classList.toggle("cur", i === state.cur);
   }
 
+  /*
+   * Что сделал выбранный ответ: по ключу — в какие шкалы он засчитан (или что баллов не даёт
+   * и какой ответ дал бы баллы), плюс по разнице до/после — какие баллы сняты при смене ответа
+   * и что поменяла поправка K. Только по шкалам из FOCUS.
+   */
   function impactHtml(last) {
-    if (!last.changed.length) return `<span class="quiet">на шкалы не повлиял</span>`;
+    const i = last.q;
+    const a = state.answers[i];
     const { before, after } = last;
-    return "Повлиял: " + last.changed.map((s) => {
-      const dr = after.raw[s] - before.raw[s];
-      const dc = after.corrected[s] - before.corrected[s];
-      let what;
-      if (dr) what = `${signed(dr, 0)}`;
-      else if (dc) what = `${signed(dc, 0)} (поправка K)`;
-      else what = "Т";
-      return `<span class="chip">${s} ${what}</span>`;
-    }).join("· ");
+    const keys = S.QUESTION_KEYS[i].filter((k) => FOCUS.has(k.scale));
+    const parts = [];
+
+    if (a === "Y" || a === "N") {
+      const mine = keys.filter((k) => k.answer === a).map((k) => k.scale);
+      const other = keys.filter((k) => k.answer !== a).map((k) => k.scale);
+      if (mine.length) {
+        parts.push(`<span class="chip plus">«${WORD[a]}»: +1 ${byScales(mine)}</span>`);
+      } else if (other.length) {
+        const alt = a === "Y" ? "N" : "Y";
+        parts.push(`<span class="chip quiet">«${WORD[a]}» баллов не даёт (баллы даёт «${WORD[alt]}»: ${other.join(", ")})</span>`);
+      } else {
+        parts.push(`<span class="chip quiet">на отслеживаемые шкалы не влияет</span>`);
+      }
+    } else if (a === "?") {
+      parts.push(`<span class="chip quiet">«Не знаю» баллов не даёт</span>`);
+    }
+
+    // Баллы, снятые сменой ответа (например, «Нет» → «Да»).
+    const minus = last.changed.filter((s) => after.raw[s] < before.raw[s]);
+    const removedWord = a === null ? "ответ снят" : "прежний ответ снят";
+    if (minus.length) parts.push(`<span class="chip minus">${removedWord}: −1 ${byScales(minus)}</span>`);
+    else if (a === null) parts.push(`<span class="chip quiet">ответ снят</span>`);
+
+    // Шкалы, у которых изменилась только поправка на K.
+    const viaK = last.changed.filter((s) => after.raw[s] === before.raw[s] && after.corrected[s] !== before.corrected[s]);
+    if (viaK.length) {
+      const d = after.corrected[viaK[0]] - before.corrected[viaK[0]];
+      parts.push(`<span class="chip">поправка K ${d > 0 ? "+" : "−"}: ${viaK.join(", ")}</span>`);
+    }
+    return parts.join(`<span class="sep">·</span>`);
   }
 
   function renderSheetCell(i) {
@@ -200,7 +233,7 @@
       let d = "";
       if (changed.has(s) && state.last.before.t[s] !== null && t !== null) d = signed(t - state.last.before.t[s], 2);
       const over = profile.validity.checks.some((c) => c.scale === s && c.exceeded);
-      const cls = [changed.has(s) ? "changed" : "", idx === 3 ? "grp" : "", over ? "invalid" : ""].join(" ").trim();
+      const cls = [changed.has(s) ? "changed" : "", idx === 3 ? "grp" : "", over ? "invalid" : "", FOCUS.has(s) ? "" : "other"].join(" ").trim();
       const lvlTxt = lvl && lvl !== "norm" ? `<span class="lvl">${levelWord[lvl]}</span>` : "";
       return `<tr class="${cls}" data-s="${s}"><td class="num t ${lvl ? "lv-" + lvl : ""}">${fmtT(t)}${lvlTxt}</td>` +
         `<td class="num">${profile.raw[s]}${corr}</td><td class="name" title="${scaleLabel(s)}">${scaleLabel(s)}</td><td class="num d">${d}</td></tr>`;
@@ -238,7 +271,7 @@
       const lvl = profile.level[s] ? "lv-" + profile.level[s] : "";
       const t = profile.t[s] === null ? "—" : Math.round(profile.t[s]);
       const over = profile.validity.checks.some((c) => c.scale === s && c.exceeded) ? "invalid" : "";
-      return `<div class="sc ${g} ${lvl} ${over} ${changed.has(s) ? "changed" : ""}" title="${scaleLabel(s)}"><b>${s}</b><span>${t}</span><small>${profile.corrected[s]}</small></div>`;
+      return `<div class="sc ${g} ${lvl} ${over} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}"><b>${s}</b><span>${t}</span><small>${profile.corrected[s]}</small></div>`;
     });
     cells.push(`<div class="sc" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
     el.strip.innerHTML = cells.join("");
@@ -287,10 +320,12 @@
       const color = i < 3 ? "--ctrl" : "--clin";
       const cx = x(i), cy = y(t);
       const clipped = t < 0 || t > 120;
+      if (!FOCUS.has(s)) out.push(`<g opacity="0.4">`);
       if (changed.has(s)) out.push(`<circle cx="${cx}" cy="${cy}" r="8" fill="none" stroke="${css("--hl")}" stroke-width="2"/>`);
       out.push(`<circle cx="${cx}" cy="${cy}" r="4.2" fill="${clipped ? css("--surface") : css(color)}" stroke="${css(color)}" stroke-width="2"><title>${scaleLabel(s)}: Т ${t.toFixed(2)}</title></circle>`);
       const ly = t > 108 ? cy + 18 : cy - (changed.has(s) ? 12 : 9);
       out.push(`<text class="v${changed.has(s) ? " changed" : ""}" x="${cx}" y="${ly}" text-anchor="middle">${Math.round(t)}</text>`);
+      if (!FOCUS.has(s)) out.push("</g>");
     });
     el.chart.innerHTML = out.join("");
   }
@@ -348,7 +383,7 @@
     state.history[i].push(next);
     const after = S.computeProfile(state.answers, state.sex);
     const prevLast = state.last ? state.last.q : null;
-    state.last = { q: i, changed: S.changedScales(before, after), before, after };
+    state.last = { q: i, changed: S.changedScales(before, after).filter((s) => FOCUS.has(s)), before, after };
     const prevCur = state.cur;
     state.cur = i;
 

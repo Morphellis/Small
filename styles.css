@@ -283,9 +283,14 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 .q-key .ans-Y { color: var(--yes); }
 .q-key .ans-N { color: var(--no); }
 .q-key .sep { color: var(--muted); }
-.q-impact { color: var(--hl); }
-.q-impact .chip { display: inline-block; margin-right: 6px; white-space: nowrap; }
+.q-impact { display: flex; flex-wrap: wrap; gap: 2px 6px; color: var(--text); font-size: 12.5px; }
+.q-impact .chip { white-space: nowrap; }
+.q-impact .chip.plus { color: var(--hl); font-weight: 600; }
+.q-impact .chip.minus { color: var(--low); font-weight: 600; }
 .q-impact .quiet { color: var(--muted); }
+.q-impact .sep { color: var(--muted); }
+.scores tr.other td { opacity: 0.45; }
+.strip .sc.other { opacity: 0.45; }
 
 .q-btns { display: inline-flex; gap: 4px; }
 .q-btns button {
