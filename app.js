@@ -17,7 +17,6 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     panel: $("panel"),
-    panelMeta: $("panelMeta"),
     panelBody: $("panelBody"),
     chartWrap: $("chartWrap"),
     chart: $("chart"),
@@ -373,10 +372,6 @@
     updateScrollMargin();
   }
 
-  function renderSummary() {
-    el.panelMeta.textContent = `K = ${profile.raw.K}`;
-  }
-
   function renderScores() {
     profile = S.computeProfile(state.answers);
     renderTable();
@@ -384,7 +379,6 @@
     renderStrip();
     renderChart();
     renderBars();
-    renderSummary();
   }
 
   function renderAll() {
