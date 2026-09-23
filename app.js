@@ -38,7 +38,7 @@
   };
 
   const state = {
-    sex: null,
+    sex: "male", // по умолчанию мужской: тест проходят в основном мужчины
     answers: new Array(N).fill(null),
     history: Array.from({ length: N }, () => []),
     keyMode: false,
@@ -73,7 +73,7 @@
   }
 
   function applySnapshot(s) {
-    state.sex = s.sex === "male" || s.sex === "female" ? s.sex : null;
+    state.sex = s.sex === "male" || s.sex === "female" ? s.sex : "male";
     state.answers = S.normalizeAnswers(s.answers);
     state.history = Array.from({ length: N }, (_, i) => {
       const h = Array.isArray(s.history) && Array.isArray(s.history[i]) ? s.history[i] : [];
