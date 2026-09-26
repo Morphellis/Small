@@ -4,6 +4,7 @@
   "private": true,
   "description": "Тренажёр тестов СМОЛ (Мини-Мульт) и СМИЛ (Собчик): статический сайт без сборки",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "bump": "node tools/bump-version.js"
   }
 }

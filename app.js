@@ -28,6 +28,8 @@
     return "smol";
   })();
   const TEST = TESTS[TEST_ID];
+  // Тест, открытый по ссылке с #smol / #smil, становится выбранным и при следующем заходе без хеша.
+  try { localStorage.setItem(TEST_KEY, TEST_ID); } catch (e) { /* без хранилища — только по адресу */ }
 
   const D = TEST.D;
   const S = TEST.S;
@@ -40,7 +42,7 @@
   const HINTS = TEST.hints;
   const USE_HINTS = Object.keys(HINTS).length > 0;
   const KEY_HIGHLIGHT = !USE_HINTS && TEST.keyHighlight;
-  const scalesWord =(list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
+  const scalesWord = (list) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
   const byScales = (list) => (list.length > 1 ? "по шкалам " : "по шкале ") + list.join(", ");
 
   const $ = (id) => document.getElementById(id);
@@ -129,7 +131,6 @@
     return (v > 0 ? "+" : v < 0 ? "−" : "±") + s;
   }
   const scaleLabel = (s) => `${D.scaleInfo[s].code}: ${D.scaleInfo[s].name}`;
-  const shortCode = (s) => s;
   const levelWord = { high: "высокое", low: "низкое" };
 
   // ---------- построение вопросов ----------
@@ -151,7 +152,7 @@
       if (keys.length) {
         // «Ключ: «Да» → шкалы F, 1 · «Нет» → шкалы 3, 6»
         const parts = ["Y", "N"].map((a) => {
-          const list = keys.filter((k) => k.answer === a).map((k) => shortCode(k.scale));
+          const list = keys.filter((k) => k.answer === a).map((k) => k.scale);
           if (!list.length) return "";
           return `<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${scalesWord(list)}</span>`;
         }).filter(Boolean);
@@ -245,7 +246,7 @@
     const last = state.last;
     if (!last) {
       el.impact.className = "impact";
-      el.impact.innerHTML = `<span class="impact-empty">Отметь ответ: здесь покажется, какие шкалы он изменил и насколько.</span>`;
+      el.impact.innerHTML = `<span class="impact-empty">Отметьте ответ: здесь покажется, какие шкалы он изменил и насколько.</span>`;
       return;
     }
     const i = last.q;
@@ -315,7 +316,6 @@
         `<td class="name" title="Пункты «Номер данного пункта следует обвести кружочком»: правильно отвечать «Не знаю»">Контрольные пункты</td><td></td></tr>`);
     }
     el.scoreBody.innerHTML = rows.join("");
-
   }
 
   function renderValidity() {
@@ -391,8 +391,16 @@
       `<div class="bars-legend"><span class="lo">низкие</span> ⇒ <span class="mid">средние</span> ⇒ <span class="hi">высокие значения</span></div>`;
   }
 
+  // Ширина графика в координатах SVG равна ширине колонки в пикселях: так подписи не сжимаются на узком экране.
+  let chartW = 0;
   function renderChart() {
-    const W = 600, H = 290, m = { l: 34, r: 10, t: 12, b: 26 };
+    const w = el.chartWrap.clientWidth;
+    const W = w > 0 ? Math.round(Math.min(800, Math.max(300, w))) : 600;
+    // Узкая колонка — график повыше; широкая — пониже, но не выше половины экрана (телефон горизонтально).
+    const H = W <= 400 ? 230 : Math.round(Math.max(180, Math.min(320, W * 0.5, window.innerHeight * 0.55)));
+    const m = { l: 34, r: 10, t: 12, b: 26 };
+    chartW = W;
+    el.chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const pw = W - m.l - m.r, ph = H - m.t - m.b;
     const slot = (i) => i + (i >= 3 ? 0.7 : 0);
     const span = slot(ORDER.length - 1);
@@ -463,7 +471,7 @@
     el.keyBtn.querySelector(".short").textContent = "Ключ";
     document.body.classList.toggle("keymode", state.keyMode);
     for (const k of el.questions.querySelectorAll(".q-key")) k.hidden = !state.keyMode;
-    updateScrollMargin();
+    updatePanelHeight();
   }
 
   // Кнопка показывает, на какую тему переключит: в тёмной — солнце, в светлой — луна.
@@ -540,14 +548,13 @@
     }
   }
 
-  function updateScrollMargin() {
+  function updatePanelHeight() {
     const h = el.panel.getBoundingClientRect().height;
     // Высота липкой панели нужна боковой колонке (прилипает под ней). На узком низком экране
     // слишком высокая панель не прилипает, чтобы не закрывать вопросы.
     document.documentElement.style.setProperty("--panel-h", h + "px");
     const narrow = window.matchMedia("(max-width: 1000px)").matches;
     el.panel.classList.toggle("unstick", narrow && h > window.innerHeight * 0.45);
-    for (const li of el.questions.children) li.style.scrollMarginTop = h + 12 + "px";
   }
 
   function resetAll() {
@@ -597,6 +604,11 @@
         location.reload();
       });
     }
+    // Смена #smol / #smil в адресе или переход по такой ссылке на открытой странице.
+    window.addEventListener("hashchange", () => {
+      const h = location.hash.slice(1);
+      if (TESTS[h] && h !== TEST_ID) location.reload();
+    });
     el.keyBtn.addEventListener("click", () => { state.keyMode = !state.keyMode; renderLayout(); persist(); });
     for (const b of el.viewButtons) b.addEventListener("click", () => { state.profileView = b.dataset.view; renderLayout(); persist(); });
     el.toggleProfile.addEventListener("click", () => { state.showProfile = !state.showProfile; renderLayout(); persist(); });
@@ -617,6 +629,7 @@
 
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.code === "Escape" && el.validity.open) { el.validity.open = false; return; }
       if (e.code === "Escape" && !WIDE.matches && state.showProfile) { state.showProfile = false; renderLayout(); return; }
       const tag = (e.target.tagName || "").toLowerCase();
       if (tag === "select" || tag === "textarea" || tag === "input") return;
@@ -641,8 +654,14 @@
       else if (code === "ArrowUp" || code === "KeyK") { e.preventDefault(); setCur(state.cur - 1, true); }
     });
 
-    if ("ResizeObserver" in window) new ResizeObserver(updateScrollMargin).observe(el.panel);
-    window.addEventListener("resize", updateScrollMargin);
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(updatePanelHeight).observe(el.panel);
+      new ResizeObserver(() => {
+        const w = el.chartWrap.clientWidth;
+        if (w > 0 && profile && Math.round(Math.min(800, Math.max(300, w))) !== chartW) renderChart();
+      }).observe(el.chartWrap);
+    }
+    window.addEventListener("resize", updatePanelHeight);
   }
 
   buildQuestions();

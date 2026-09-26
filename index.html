@@ -6,17 +6,27 @@
   <meta name="color-scheme" content="dark light">
   <title>MMPI</title>
   <meta name="description" content="СМОЛ (Мини-Мульт, 71 вопрос) и СМИЛ (566 утверждений): шкалы и профиль пересчитываются после каждого ответа.">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://morphellis.github.io/Small/">
   <meta property="og:title" content="MMPI">
   <meta property="og:description" content="СМОЛ (Мини-Мульт, 71 вопрос) и СМИЛ (566 утверждений): шкалы и профиль пересчитываются после каждого ответа.">
+  <meta property="og:image" content="https://morphellis.github.io/Small/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <script>
-    /* тема до отрисовки, чтобы не мигало: по умолчанию тёмная */
+    /* тема до отрисовки, чтобы не мигало: сохранённый выбор, иначе как в системе */
     (function () {
-      var t = "dark";
+      var t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
       try { var v = localStorage.getItem("trainer-theme"); if (v === "light" || v === "dark") t = v; } catch (e) {}
       document.documentElement.setAttribute("data-theme", t);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=25">
 </head>
 <body>
   <!-- Верх (липкий): управление, что изменил последний ответ, все шкалы одной полоской -->
@@ -31,7 +41,7 @@
         <span class="spacer"></span>
         <span class="toast" id="toast" role="status" aria-live="polite"></span>
         <button type="button" class="btn btn-key" id="keyBtn" aria-pressed="false"><span class="long">Показать ключ</span><span class="short">Ключ</span></button>
-        <button type="button" class="btn btn-ghost" id="toggleProfile" aria-pressed="true"><span class="long">Шкалы</span><span class="short">Шкалы</span></button>
+        <button type="button" class="btn btn-ghost" id="toggleProfile" aria-pressed="true"><span class="long">Профиль</span><span class="short">Профиль</span></button>
         <button type="button" class="btn btn-theme" id="themeBtn" aria-label="Переключить тему" title="Тёмная / светлая тема"></button>
         <button type="button" class="btn btn-reset" id="resetBtn" title="Сбросить результаты" aria-label="Сбросить результаты"><span class="long">Сбросить</span><span class="short">↺</span></button>
       </div>
@@ -83,14 +93,14 @@
     </aside>
   </div>
 
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Таблица · Шкалы · График</button>
+  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Профиль: таблица · шкалы · график</button>
 
-  <script src="data.js?v=24"></script>
-  <script src="scoring.js?v=24"></script>
-  <script src="hints.js?v=24"></script>
-  <script src="smil-data.js?v=24"></script>
-  <script src="smil-scoring.js?v=24"></script>
-  <script src="smil-hints.js?v=24"></script>
-  <script src="app.js?v=24"></script>
+  <script src="data.js?v=25"></script>
+  <script src="scoring.js?v=25"></script>
+  <script src="hints.js?v=25"></script>
+  <script src="smil-data.js?v=25"></script>
+  <script src="smil-scoring.js?v=25"></script>
+  <script src="smil-hints.js?v=25"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
