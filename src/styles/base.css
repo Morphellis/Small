@@ -190,6 +190,10 @@ kbd {
   .btn-theme { min-width: 34px; padding: 3px 5px; }
   .test-switch button { min-height: 34px; align-items: center; padding: 4px 8px; }
   .test-switch button b { font-size: 14px; letter-spacing: 0.02em; }
+  /* переключатель тестов — отдельной строкой во всю ширину, кнопки ниже; тестов много — строка листается вбок */
+  .test-switch { flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; }
+  .test-switch::-webkit-scrollbar { display: none; }
+  .test-switch button { flex: 1 0 auto; justify-content: center; }
 }
 
 /* совсем узкий телефон (320–360): шапка в одну строку */

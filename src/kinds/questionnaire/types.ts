@@ -105,6 +105,9 @@ export interface QuestionnaireDef {
   /** Контрольные пункты («Номер данного пункта следует обвести кружочком»): правильно отвечать «Не знаю». */
   controlItems?: number[];
 
+  /** false — выбор обязательный, только «Да» или «Нет» (как в ММИЛ). По умолчанию «Не знаю» есть. */
+  allowDontKnow?: boolean;
+
   ui: QuestionnaireUi;
 }
 

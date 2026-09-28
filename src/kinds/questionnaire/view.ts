@@ -54,7 +54,7 @@ const levelWord: Record<string, string> = { high: "высокое", low: "низ
 const isAnswer = (v: unknown): v is Answer => v === "Y" || v === "N" || v === "?";
 const scalesWord = (list: string[]) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
 
-function layoutHtml(ctx: AppContext): string {
+function layoutHtml(ctx: AppContext, dk: boolean): string {
   return `
   <!-- Верх (липкий): управление, что изменил последний ответ, все шкалы одной полоской -->
   <header class="panel" id="panel" aria-label="Баллы">
@@ -76,7 +76,7 @@ function layoutHtml(ctx: AppContext): string {
 
   <div class="wrap layout" id="layout">
     <main class="main">
-      <p class="keys-hint" id="hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · <kbd>3</kbd> Не знаю · <kbd>0</kbd> снять ответ · <kbd>↑</kbd><kbd>↓</kbd> другой вопрос</p>
+      <p class="keys-hint" id="hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · ${dk ? "<kbd>3</kbd> Не знаю · " : ""}<kbd>0</kbd> снять ответ · <kbd>↑</kbd><kbd>↓</kbd> другой вопрос</p>
       <ol class="questions" id="questions"></ol>
 
       <section class="sheet" aria-labelledby="sheetTitle">
@@ -85,9 +85,9 @@ function layoutHtml(ctx: AppContext): string {
         <ul class="legend">
           <li><span class="cell st-empty"></span>нет ответа</li>
           <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>«Да» или «Нет» с первого раза</li>
-          <li><span class="cell st-changed a-N">Н</span>ответ менялся (Да ↔ Нет или после «Не знаю»)</li>
+          <li><span class="cell st-changed a-N">Н</span>ответ менялся (Да ↔ Нет${dk ? " или после «Не знаю»" : ""})</li>${dk ? `
           <li><span class="cell st-dk a-dk">?</span>«Не знаю»</li>
-          <li><span class="cell st-dkAfter a-dk">?</span>сначала «Да»/«Нет», затем «Не знаю»</li>
+          <li><span class="cell st-dkAfter a-dk">?</span>сначала «Да»/«Нет», затем «Не знаю»</li>` : ""}
         </ul>
       </section>
     </main>
@@ -128,6 +128,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   const USE_HINTS = Object.keys(HINTS).length > 0;
   const KEY_HIGHLIGHT = !USE_HINTS && def.ui.keyHighlight;
   const KEYS = questionKeys(def);
+  // Есть ли ответ «Не знаю» (в ММИЛ выбор обязательный: только «Да» или «Нет»).
+  const DK = def.allowDontKnow !== false;
   const scaleLabel = (s: string) => `${def.scaleInfo[s].code}: ${def.scaleInfo[s].name}`;
   const profileOf = (answers: MaybeAnswer[]) => computeProfile(def, answers);
 
@@ -135,7 +137,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   const { signal } = abort;
   const cleanups: (() => void)[] = [];
 
-  root.innerHTML = layoutHtml(ctx);
+  root.innerHTML = layoutHtml(ctx, DK);
   const $ = <T extends Element = HTMLElement>(id: string) => root.querySelector<T>("#" + id)!;
   const el = {
     panel: $("panel"),
@@ -227,7 +229,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
         `<span class="q-num">${i + 1}</span>` +
         `<div class="q-body"><p class="q-text"></p><div class="q-key" hidden></div><div class="q-impact" hidden></div></div>` +
         `<div class="q-btns" role="group" aria-label="Ответ на вопрос ${i + 1}">` +
-        `<button type="button" data-a="Y">Да</button><button type="button" data-a="N">Нет</button><button type="button" data-a="?">Не знаю</button></div>`;
+        `<button type="button" data-a="Y">Да</button><button type="button" data-a="N">Нет</button>` +
+        (DK ? `<button type="button" data-a="?">Не знаю</button>` : "") + `</div>`;
       li.querySelector(".q-text")!.textContent = text;
       const keys = KEYS[i].filter((k) => FOCUS.has(k.scale));
       const keyBox = li.querySelector(".q-key")!;
@@ -390,7 +393,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
       return `<tr class="${cls}" data-s="${s}"><td class="num t ${lvl ? "lv-" + lvl : ""}">${fmtT(t, profile.extrapolated[s])}${lvlTxt}</td>` +
         `<td class="num">${profile.raw[s]}${corr}</td><td class="name" title="${scaleLabel(s)}">${scaleLabel(s)}</td><td class="num d">${d}</td></tr>`;
     });
-    rows.push(`<tr class="dk grp"><td class="num t">—</td><td class="num">${profile.dontKnow}</td><td class="name">?: Ответ «Не знаю»</td><td></td></tr>`);
+    if (DK) rows.push(`<tr class="dk grp"><td class="num t">—</td><td class="num">${profile.dontKnow}</td><td class="name">?: Ответ «Не знаю»</td><td></td></tr>`);
     if (profile.controlTotal) {
       rows.push(`<tr class="dk"><td class="num t">—</td><td class="num">${profile.controlCorrect}<small> из ${profile.controlTotal}</small></td>` +
         `<td class="name" title="Пункты «Номер данного пункта следует обвести кружочком»: правильно отвечать «Не знаю»">Контрольные пункты</td><td></td></tr>`);
@@ -433,7 +436,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
       }
       return `<div class="sc ${g} ${lvl} ${over} ${dn} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}: Т ${t}, сырые с поправкой ${profile.corrected[s]}"><b>${s}</b>${dt}<span>${t}</span><small>${profile.corrected[s]}</small></div>`;
     });
-    cells.push(`<div class="sc other" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
+    if (DK) cells.push(`<div class="sc other" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
     el.strip.style.setProperty("--n", String(cells.length));
     el.strip.innerHTML = cells.join("");
   }
@@ -617,7 +620,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
       let answer: Answer | null = null;
       if (code === "Digit1" || code === "Numpad1" || code === "KeyY") answer = "Y";
       else if (code === "Digit2" || code === "Numpad2" || code === "KeyN") answer = "N";
-      else if (code === "Digit3" || code === "Numpad3" || code === "Slash") answer = "?";
+      else if (DK && (code === "Digit3" || code === "Numpad3" || code === "Slash")) answer = "?";
       if (answer) {
         e.preventDefault();
         setAnswer(state.cur, answer, { advance: true });
