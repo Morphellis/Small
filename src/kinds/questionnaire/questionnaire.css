@@ -1,220 +1,129 @@
-:root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-2: #eef0f3;
-  --text: #1a1d22;
-  --muted: #646b76;
-  --border: #d9dde3;
-  --accent: #2563eb;
-  --ctrl: #2f7de1;
-  --clin: #d08c00;
-  --hl: #d92d20;
-  --hl-bg: #fdeceb;
-  --yes: #2563eb;
-  --no: #c2410c;
-  --dk: #6b7280;
-  --key: #16a34a;
-  --key-bg: #e8f7ee;
-  --high: #c2410c;
-  --low: #1d6fb8;
-  --low-bg: #e6f1fb;
-  --grid: #eceef1;
-  --grid-strong: #d3d8de;
-  --band: rgba(37, 99, 235, 0.06);
-  --shadow: 0 2px 10px rgba(16, 24, 40, 0.08);
-  --radius: 8px;
-  --bar-mid: #1e8a2e;
-  --bar-out: #d7263d;
-  --bar-track: #eef0f3;
-  --panel-h: 190px; /* высота липкой панели, уточняется из app.js */
-  color-scheme: light;
-}
-
-/* тёмная тема: data-theme ставит скрипт в index.html (сохранённый выбор или тема системы) */
-:root[data-theme="dark"] {
-  --bg: #0f1115;
-  --surface: #171a20;
-  --surface-2: #20242c;
-  --text: #e6e8eb;
-  --muted: #9aa2ad;
-  --border: #2c313a;
-  --accent: #5b8def;
-  --ctrl: #60a5fa;
-  --clin: #f0b429;
-  --hl: #ff6b61;
-  --hl-bg: rgba(255, 107, 97, 0.13);
-  --yes: #3b82f6;
-  --no: #ea6a2a;
-  --dk: #7b8491;
-  --key: #34c46b;
-  --key-bg: rgba(52, 196, 107, 0.12);
-  --high: #ff8a4c;
-  --low: #6cb4ff;
-  --low-bg: rgba(108, 180, 255, 0.13);
-  --grid: #22262d;
-  --grid-strong: #343a44;
-  --band: rgba(91, 141, 239, 0.08);
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
-  --bar-mid: #2fa14a;
-  --bar-out: #e5485d;
-  --bar-track: #242932;
-  color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-html { -webkit-text-size-adjust: 100%; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-.wrap { max-width: 1360px; margin: 0 auto; padding: 0 16px; }
-
-h2 { margin: 0; font-weight: 650; font-size: 15px; }
+/*
+ * Экран опросника: панель влияния ответа, полоска шкал, вопросы, лист, профиль.
+ * Подключается вместе с опросником, поэтому не влияет на тесты другого типа.
+ */
 
 button, select, input { font: inherit; color: inherit; }
 
-kbd {
-  display: inline-block;
-  min-width: 1.5em;
-  padding: 0 4px;
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  font: 11px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
-  text-align: center;
-}
-
-/* ================= ВЕРХ: липкая панель ================= */
-.panel {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-.panel.unstick { position: relative; }
-.panel .wrap { padding-bottom: 8px; }
-
-/* строка 1: тест · достоверность · кнопки */
-.panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 0 6px; }
-.spacer { flex: 1; }
-
-.test-switch { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.test-switch button {
-  display: flex; align-items: baseline; gap: 7px; padding: 5px 12px;
-  border: 0; background: var(--surface-2); color: var(--text); cursor: pointer; line-height: 1.2;
-}
-.test-switch button + button { border-left: 1px solid var(--border); }
-.test-switch button b { font-size: 16px; font-weight: 750; letter-spacing: 0.04em; }
-.test-switch button small { font-size: 12px; color: var(--muted); }
-.test-switch button:hover { background: var(--grid-strong); }
-.test-switch button.on { background: var(--accent); color: #fff; }
-.test-switch button.on small { color: rgba(255, 255, 255, 0.85); }
-.test-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-.btn {
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface-2);
-  font-size: 13px;
-  line-height: 1.4;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.btn:hover { border-color: var(--muted); }
-.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.btn-key[aria-pressed="true"] { background: var(--key); border-color: var(--key); color: #fff; font-weight: 600; }
-.btn-ghost { background: transparent; }
-.btn-ghost[aria-pressed="true"] { background: var(--surface-2); border-color: var(--muted); }
-.btn-reset { background: transparent; color: var(--muted); }
-.btn-reset:hover { color: var(--hl); border-color: var(--hl); }
-.btn .short { display: none; }
-.btn-theme { min-width: 34px; padding: 5px 8px; background: transparent; }
-
-.toast { font-size: 13px; color: var(--key); }
-.toast:empty { display: none; }
-
 /* достоверность: компактная плашка в первой строке, пояснение раскрывается поверх вопросов */
+
 .validity { position: relative; border: 1px solid var(--key); border-radius: 6px; background: var(--key-bg); font-size: 13px; }
+
 .validity summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; padding: 4px 10px; cursor: pointer; }
+
 .validity summary b { color: var(--key); }
+
 .validity .v-counts { color: var(--muted); font-variant-numeric: tabular-nums; }
+
 .validity-body {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; width: min(440px, 90vw);
   padding: 4px 10px 6px; border: 1px solid var(--key); border-radius: 6px;
   background: var(--surface); box-shadow: var(--shadow);
   max-height: 60vh; overflow-y: auto;
 }
+
 .validity.bad .validity-body { border-color: var(--hl); }
+
 .validity-body p { margin: 4px 0; }
+
 .validity.bad { border-color: var(--hl); background: var(--hl-bg); }
+
 .validity.bad summary b, .validity.bad .v-counts { color: var(--hl); }
 
 /* строка 2: что сделал последний ответ */
+
 .impact {
   display: flex; align-items: center; gap: 8px 16px;
   min-height: 56px; padding: 7px 12px; margin-bottom: 6px;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
 }
+
 .impact.hit { border-color: var(--hl); background: var(--surface); box-shadow: inset 4px 0 0 var(--hl); }
+
 .impact.miss { background: var(--surface-2); }
+
 .impact-empty { color: var(--muted); font-size: 14px; }
 
 .imp-q { flex: 0 1 32%; min-width: 0; }
+
 .imp-q-head { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+
 .imp-q-text { margin-top: 1px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .ans { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12.5px; font-weight: 650; color: #fff; background: var(--dk); }
+
 .ans.Y { background: var(--yes); }
+
 .ans.N { background: var(--no); }
+
 .ans.none { background: transparent; border: 1px solid var(--border); color: var(--muted); }
 
 .imp-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+
 .imp-label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+
 .imp-chip {
   display: inline-flex; align-items: baseline; gap: 7px; padding: 3px 10px;
   border: 1px solid var(--hl); border-radius: 7px; background: var(--hl-bg);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
 .imp-chip.minus { border-color: var(--low); background: var(--low-bg); }
+
 .imp-chip b { font-size: 16px; font-weight: 750; }
+
 .imp-chip .d { font-weight: 700; color: var(--hl); }
+
 .imp-chip.minus .d { color: var(--low); }
+
 .imp-chip small { font-weight: 500; }
+
 .imp-chip .t { font-size: 12.5px; color: var(--text); }
+
 .imp-note { font-size: 13px; color: var(--muted); }
+
 .imp-more { font-size: 12px; color: var(--muted); }
 
 /* строка 3: все шкалы одной полоской */
+
 .strip { display: grid; grid-template-columns: repeat(var(--n, 12), minmax(0, 1fr)); gap: 4px; }
+
 .strip .sc { position: relative; padding: 3px 0 2px; border-radius: 6px; background: var(--surface-2); text-align: center; font-variant-numeric: tabular-nums; line-height: 1.2; cursor: default; }
+
 .strip .sc b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+
 .strip .sc span { display: block; font-size: 15px; font-weight: 650; }
+
 .strip .sc small { display: block; font-size: 10px; color: var(--muted); }
+
 .strip .sc em { position: absolute; top: 2px; right: 4px; font-style: normal; font-size: 11px; font-weight: 700; color: var(--hl); }
+
 .strip .sc.dn em { color: var(--low); }
+
 .strip .sc.ctrl b { color: var(--ctrl); }
+
 .strip .sc.clin b { color: var(--clin); }
+
 .strip .sc.lv-high span { color: var(--high); }
+
 .strip .sc.lv-low span { color: var(--low); }
+
 .strip .sc.invalid { box-shadow: inset 0 0 0 2px var(--hl); }
+
 .strip .sc.changed { background: var(--hl-bg); box-shadow: inset 0 0 0 1.5px var(--hl); }
+
 .strip .sc.changed.dn { background: var(--low-bg); box-shadow: inset 0 0 0 1.5px var(--low); }
+
 .strip .sc.other { opacity: 0.5; }
+
 .strip .sc.other.changed { opacity: 0.8; }
 
 /* ================= НИЗ: вопросы + боковой профиль ================= */
+
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; margin-top: 12px; }
+
 .layout.no-side { grid-template-columns: minmax(0, 1fr); }
+
 .layout.no-side .side { display: none; }
 
 .keys-hint { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
@@ -231,70 +140,124 @@ kbd {
 }
 
 .side-head { display: none; }
+
 .side-open { display: none; }
+
 .view-switch { display: flex; margin: 0 0 10px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+
 .view-switch button { flex: 1; padding: 4px 12px; border: 0; background: transparent; font-size: 13px; cursor: pointer; color: var(--muted); }
+
 .view-switch button + button { border-left: 1px solid var(--border); }
+
 .view-switch button.on { background: var(--accent); color: #fff; }
+
 .view-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .chart-wrap svg { display: block; width: 100%; height: auto; }
+
 .chart-wrap text { font: 11px system-ui, sans-serif; fill: var(--muted); }
+
 .chart-wrap .v { font-size: 11px; fill: var(--text); font-variant-numeric: tabular-nums; }
+
 .chart-wrap .v.changed { fill: var(--hl); font-weight: 700; }
+
 .chart-wrap .xl { font-size: 12px; font-weight: 600; fill: var(--text); }
+
 .chart-wrap .empty { font-size: 14px; fill: var(--muted); }
 
 /* вид «Шкалы»: полосы как в результатах psytests.org */
+
 .bars { font-size: 13px; }
+
 .bars-h { margin: 2px 0 3px; text-align: center; font-size: 13.5px; color: var(--text); }
+
 .bars-h + .bar-row { margin-top: 0; }
+
 .bar-row { display: grid; grid-template-columns: minmax(118px, 36%) minmax(0, 1fr) 40px; align-items: center; gap: 8px; margin: 0 0 3px; }
+
 .bar-row + .bars-h { margin-top: 8px; }
+
 .bar-name { text-align: right; color: var(--accent); line-height: 1.15; overflow-wrap: anywhere; }
+
 .bar-track { position: relative; height: 17px; background: var(--bar-track); }
+
 .bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--bar-mid); }
+
 .bar-track::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(to right, transparent 0 calc(var(--cell, 5%) - 1.5px), var(--surface) calc(var(--cell, 5%) - 1.5px) var(--cell, 5%));
 }
+
 .bar-row.is-out .bar-fill { background: var(--bar-out); }
+
 .bar-val { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 .bar-val small { margin-left: 3px; font-size: 10.5px; font-weight: 600; color: var(--hl); }
+
 .bar-row.changed .bar-name { color: var(--hl); font-weight: 600; }
+
 .bar-row.changed .bar-track { box-shadow: 0 0 0 2px var(--hl); }
+
 .bar-row.other { opacity: 0.45; }
+
 .bar-row.other.changed { opacity: 1; }
+
 .bar-axis { margin-top: 2px; }
+
 .bar-track.axis { height: 13px; background: none; }
+
 .bar-track.axis::after { display: none; }
+
 .bar-track.axis i { position: absolute; top: 0; font-style: normal; font-size: 10.5px; line-height: 1; white-space: nowrap; }
+
 .bar-track.axis i.c { transform: translateX(-50%); }
+
 .bar-track.axis b { font-weight: 400; }
+
 .bars .lo, .bars .hi { color: var(--bar-out); }
+
 .bars .mid { color: var(--bar-mid); }
+
 .bars-legend { margin-top: 2px; text-align: center; font-size: 13px; }
 
 table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+
 .scores th { font-weight: 600; color: var(--muted); text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+
 .scores td { padding: 3px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+
 .scores .num { text-align: right; }
+
 .scores td.t { font-weight: 650; }
+
 .scores td.t.lv-high { color: var(--high); }
+
 .scores td.t.lv-low { color: var(--low); }
+
 .scores td.t .lvl { font-weight: 400; font-size: 11px; margin-left: 4px; }
+
 .scores small { color: var(--muted); font-size: 11px; }
+
 .scores td.name { overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 60%; }
+
 .scores td.d { color: var(--muted); }
+
 .scores tr.grp td { border-top: 1px solid var(--grid-strong); }
+
 .scores tr.changed td { color: var(--hl); background: var(--hl-bg); }
+
 .scores tr.changed td.t { color: var(--hl); }
+
 .scores tr.dk td { color: var(--muted); border-bottom: 0; }
+
 .scores tr.other td { opacity: 0.45; }
+
 .scores tr.other.changed td { opacity: 1; }
+
 .scores tr.invalid td.name::after { content: " ⚠"; color: var(--hl); }
 
 /* ---------- вопросы ---------- */
+
 .questions { list-style: none; margin: 0; padding: 0; }
 
 .q {
@@ -308,15 +271,26 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   background: var(--surface);
   scroll-margin-top: calc(var(--panel-h) + 12px);
 }
+
 .q:first-child { border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
+
 .q:last-child { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
+
 .q.cur { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
 .q.flash { animation: flash 1.2s ease-out; }
-@keyframes flash { from { background: var(--hl-bg); } to { background: var(--surface); } }
+
+@keyframes flash {
+  from { background: var(--hl-bg); }
+  to { background: var(--surface); }
+}
 
 .q-num { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; text-align: right; }
+
 .q-text { margin: 0; }
+
 .q-key, .q-impact { font-size: 12px; margin-top: 2px; }
+
 .q-key {
   display: flex;
   flex-wrap: wrap;
@@ -331,32 +305,51 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   background: var(--key-bg);
   color: var(--text);
 }
+
 .q-key .key-label { font-weight: 700; color: var(--key); }
+
 .q-key .none { color: var(--muted); font-style: italic; }
+
 .q-key .tag { white-space: nowrap; }
+
 .q-key .ans-Y { color: var(--yes); }
+
 .q-key .ans-N { color: var(--no); }
+
 .q-key .ans-dk { color: var(--dk); }
+
 .q-key .sep { color: var(--muted); }
 
 /* «что дал этот ответ» под каждым отвеченным вопросом */
+
 .q-impact { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 5px; }
+
 .q-impact .lead { font-size: 12px; color: var(--muted); }
+
 .q-impact .chip {
   display: inline-flex; align-items: baseline; gap: 4px; padding: 1px 8px;
   border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2);
   font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
 .q-impact .chip b { font-weight: 750; }
+
 .q-impact .chip.plus { border-color: var(--hl); background: var(--hl-bg); }
+
 .q-impact .chip.plus i { font-style: normal; font-weight: 700; color: var(--hl); }
+
 .q-impact .chip.minus { border-color: var(--low); background: var(--low-bg); }
+
 .q-impact .chip.minus i { font-style: normal; font-weight: 700; color: var(--low); }
+
 .q-impact .quiet { font-size: 12.5px; color: var(--muted); }
+
 .q.last { background: linear-gradient(to right, var(--hl-bg), var(--surface) 55%); }
+
 .q.last.cur { background: linear-gradient(to right, var(--hl-bg), var(--surface) 55%); }
 
 .q-btns { display: inline-flex; gap: 4px; }
+
 .q-btns button {
   min-width: 52px;
   padding: 5px 10px;
@@ -366,19 +359,31 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   font-size: 14px;
   cursor: pointer;
 }
+
 .q-btns button:hover { border-color: var(--muted); }
+
 .q-btns button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .q-btns button[data-a="?"] { min-width: 82px; }
+
 .q-btns button.on[data-a="Y"] { background: var(--yes); border-color: var(--yes); color: #fff; }
+
 .q-btns button.on[data-a="N"] { background: var(--no); border-color: var(--no); color: #fff; }
+
 .q-btns button.on[data-a="?"] { background: var(--dk); border-color: var(--dk); color: #fff; }
+
 .keymode .q-btns button.scores-key { box-shadow: 0 0 0 2px var(--key); border-color: var(--key); }
+
 .keymode .q-btns button.scores-key:not(.on) { background: var(--key-bg); }
 
 /* ---------- регистрационный лист ---------- */
+
 .sheet { margin: 24px 0 40px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+
 .sheet h2 { margin-bottom: 10px; }
+
 .sheet-scroll { overflow-x: auto; padding-bottom: 4px; }
+
 .sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, 30px); gap: 3px; max-width: calc(30 * 30px + 29 * 3px); }
 
 .cell {
@@ -398,27 +403,40 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   line-height: 1;
   cursor: pointer;
 }
+
 .cell i { font-style: normal; font-size: 9px; font-weight: 500; color: var(--muted); margin-bottom: 2px; }
+
 .cell.a-Y { color: var(--yes); }
+
 .cell.a-N { color: var(--no); }
+
 .cell.a-dk { color: var(--dk); }
+
 .cell.st-first.a-Y { background: var(--yes); border-color: var(--yes); color: #fff; }
+
 .cell.st-first.a-N { background: var(--no); border-color: var(--no); color: #fff; }
+
 .cell.st-first i, .cell.st-dk i { color: rgba(255, 255, 255, 0.85); }
+
 .cell.st-changed { border: 2px dashed currentColor; background: var(--surface); }
+
 .cell.st-dk { background: var(--dk); border-color: var(--dk); color: #fff; }
+
 .cell.st-dkAfter { border: 2px dashed var(--dk); background: repeating-linear-gradient(135deg, transparent 0 4px, var(--surface-2) 4px 8px); }
+
 .cell.last { box-shadow: 0 0 0 2px var(--hl); }
+
 .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 12px 0 0; padding: 0; font-size: 13px; color: var(--muted); }
-.legend li { display: inline-flex; align-items: center; gap: 4px; }
-.legend .cell { width: 22px; height: 22px; font-size: 11px; cursor: default; }
 
-/* ================= адаптив ================= */
+.legend li { display: inline-flex; align-items: center; gap: 4px; }
+
+.legend .cell { width: 22px; height: 22px; font-size: 11px; cursor: default; }
 
 /* планшет и телефон: подробный профиль выезжает снизу шторкой под липкой панелью (кнопка «Профиль»);
    вопросы остаются на всю ширину, а над шторкой видно, что изменил последний ответ */
+
 @media (max-width: 1000px) {
   .layout { display: block; }
   .layout.no-side .side { display: block; }
@@ -451,68 +469,43 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .validity .v-counts { display: none; }
   .validity.bad .v-counts { display: inline; }
   .keys-hint { display: none; }
-  .test-switch button small { display: none; }
 }
 
 /* телефон */
+
 @media (max-width: 640px) {
-  body { font-size: 14.5px; }
-  .wrap { padding: 0 10px; }
-  .panel-head { padding: 6px 0 4px; }
-  .panel-head { gap: 4px; }
-  .btn { min-height: 34px; padding: 3px 8px; font-size: 12.5px; }
-  .btn .long { display: none; }
-  .btn .short { display: inline; }
-  .btn-theme { min-width: 34px; padding: 3px 5px; }
-  .test-switch button { min-height: 34px; align-items: center; padding: 4px 8px; }
-  .test-switch button b { font-size: 14px; letter-spacing: 0.02em; }
   /* недостоверный результат — отдельной строкой во всю ширину, кнопки остаются в одном ряду */
   .validity.bad { order: 1; flex: 1 0 100%; }
   .validity summary { padding: 3px 8px; }
   .validity:not(.bad) .vt { display: none; }
   .validity-body { position: fixed; top: auto; left: 10px; right: 10px; width: auto; margin-top: 4px; }
-
   .impact { min-height: 0; padding: 6px 10px; gap: 4px 10px; flex-wrap: wrap; }
   .imp-q { flex: 1 0 100%; }
   .imp-q-text { display: none; }
   .imp-chip b { font-size: 15px; }
-
   /* все шкалы одной прокручиваемой строкой, чтобы панель не съедала экран */
   .strip { display: flex; overflow-x: auto; scrollbar-width: none; gap: 3px; }
   .strip::-webkit-scrollbar { display: none; }
   .strip .sc { flex: 0 0 46px; }
-
   .bar-row { grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 34px; gap: 6px; }
   .scores td.name { white-space: normal; line-height: 1.25; }
   .bars { font-size: 12px; }
-
   .q { grid-template-columns: 26px minmax(0, 1fr); padding: 9px 8px; }
   .q-btns { grid-column: 2; }
   .q-btns button { min-width: 64px; min-height: 42px; padding: 6px 10px; }
 }
 
-/* совсем узкий телефон (320–360): шапка в одну строку */
-@media (max-width: 360px) {
-  .panel-head { gap: 3px; }
-  .test-switch button { padding: 4px 6px; }
-  .test-switch button b { font-size: 13px; letter-spacing: 0; }
-  .btn { padding: 3px 6px; font-size: 12px; }
-  .btn-theme { min-width: 30px; padding: 3px 4px; }
-}
-
 /* сенсорные экраны: кнопки ответа под палец */
+
 @media (pointer: coarse) {
   .q-btns button { min-height: 42px; }
-  .panel-head .btn, .test-switch button { min-height: 36px; }
 }
 
 /* низкий экран (телефон в альбомной ориентации): панель поплотнее */
+
 @media (max-height: 500px) {
-  .panel-head { padding: 4px 0 3px; }
   .impact { min-height: 0; padding: 3px 10px; margin-bottom: 4px; }
   .imp-q-text { display: none; }
-  .btn .long { display: none; }
-  .btn .short { display: inline; }
   .validity .v-counts, .validity.bad .v-counts { display: none; }
   .side-open { display: none !important; }
   .main { padding-bottom: 0; }

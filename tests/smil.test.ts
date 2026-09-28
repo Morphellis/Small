@@ -1,17 +1,19 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const S = require("../smil-scoring.js");
-const D = require("../smil-data.js");
+import assert from "node:assert/strict";
+import { test } from "vitest";
+import { computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
+import type { MaybeAnswer } from "../src/kinds/questionnaire/types";
+import { SMIL_DATA as D } from "../src/tests/smil/data";
+import { smil } from "../src/tests/smil/definition";
 
 const ORDER = ["L", "F", "K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const N = 566;
-const fill = (a) => new Array(N).fill(a);
-const only = (base, set) => { const a = fill(base); for (const [q, v] of Object.entries(set)) a[q - 1] = v; return a; };
-const kNo = (k) => Object.fromEntries(D.scales.K.no.slice(0, k).map((q) => [q, "N"]));
+const fill = (a: MaybeAnswer) => new Array<MaybeAnswer>(N).fill(a);
+const only = (base: MaybeAnswer, set: Record<number, MaybeAnswer>) => { const a = fill(base); for (const [q, v] of Object.entries(set)) a[Number(q) - 1] = v; return a; };
+const kNo = (k: number): Record<number, MaybeAnswer> => Object.fromEntries(D.scales.K.no.slice(0, k).map((q) => [q, "N"]));
 
 // Прогоны psytests.org (мужской вариант, сентябрь 2026): «сырой/с поправкой K/Т» в порядке L F K 1 2 3 4 5 6 7 8 9 0.
 const R3 = "YNYYNYYYY?YNY?NYYYNYNNNNYNNYYYYYNYNNYNNNNYNNYNYY?YYYNNNNYNYYYYYYNNYYNYYNNYNNYYNYNYNNNYYNN?NYYNYNYYY??NNYNNYYYYYNYNYNYNYNNNYNYYNYNYYYNNN?NNNN?NNYNY?NYNNNYNYYYNNYNYNYNNYNNYY??YNNNYYNYYYNNYYYNNNNNYNNNNY?NYY?Y?NYYYNNY?YYNNYNNNYN?NNNY?YYYYNYNYNNNYNYY?YNYNNNYNYYNNNYYYYNNNNNNNNNYYNY?YNNYYYYNNNYYY?N?YYYNNYYYNYY?YNYYYN?NYYNYNYYYYYNYNYYNYNYNY?NYY?NYNYNYNNYN?YYNY?NNYNYYNY?NNNYNYNNNNNNYNNYNNNNNYNNN?NNY?N?NNNYYYN?YNNYYNY?YNYNNYNNYNYYYNYY?YYYNNYYYNNNYYYNNNYYY?YNNYYYNNY??YNNYNNNNNYNNNNNNNYNYYNNYNNNNNYY?NNNY?Y?NNNYNNNYYNYNNNNYNNYNYNNN?NN?NYYYYYN?NYNYYYNYYYYNNNNNNYNY?Y?YYNYNNY";
-const runs = [
+const runs: [string, MaybeAnswer[] | string[], string, number, number][] = [
   ["все «Верно»", fill("Y"), "0/0/35 45/45/196 1/1/29 11/12/52 20/20/58 12/12/42 24/25/65 28/28/65 25/25/100 38/39/82 59/60/126 35/35/94 34/34/59", 0, 0],
   ["все «Неверно»", fill("N"), "15/15/87 20/20/105 29/29/81 22/37/116 40/40/107 47/47/106 26/38/97 31/31/71 15/15/71 9/38/80 19/48/102 11/17/50 36/36/61", 0, 0],
   ["случайные ответы", [...R3], "9/9/66 29/29/138 19/19/63 13/23/80 27/27/75 25/25/66 22/30/77 34/34/77 15/15/71 20/39/82 34/53/112 21/25/70 29/29/54", 45, 4],
@@ -24,7 +26,7 @@ const runs = [
 
 for (const [name, answers, expected, dk, qc] of runs) {
   test("psytests: " + name, () => {
-    const p = S.computeProfile(answers);
+    const p = computeProfile(smil, answers);
     expected.split(" ").forEach((cell, i) => {
       const s = ORDER[i];
       const [raw, corr, t] = cell.split("/").map(Number);
@@ -39,7 +41,7 @@ for (const [name, answers, expected, dk, qc] of runs) {
 
 test("psytests: пример результата (женщина) — сырые баллы всех шкал, кроме 5", () => {
   const ex = [..."NNNNNNNYYYNYN?YNYYYYYYNNYNNNNNYN?NNYYYNNYNYNYYN?NNYNNYYYYNYNYN?NN?NN?NNNYYYNYYYYNNYYNNYYNYNNYNYYNYYNYYYYYNYNNYYNYNYNYNYN?Y?YNYNYNNYY?NNNYNNYNNYNNYNNYY?YYYNNNYNYNNYYYYN?YYNNYNNYYYNNY?Y?YNYYNNNYYNYY?YY?NNYY?NYYNNNNNNYNYNYYYYNNYNNNYYYNNNYYYYNNYYYNNNNNNYNYYYYNYYNNYYYYY?NNNYNYNY?YYNNYYNYNYNNNNNNN?NNYNYNNNYNNNNNYYYYNNYNYNYYNNNYNNYNNNNNYN?NNYNNNYNNNNNYN??NNYNNNYYYNNNNNNNYNYNYYNNN?NNYNNNNNNNNYNNYNNYNNNNYYYYYNYYYNYNNYNNYNNNNNYNNYYNNYYYYNNY?YYNNYYNNYNNNNYYYYNNNNNNNYY?Y?NYNNNNNNN?YYNNYYYNYNNYYYYNNNNYYNYYYNYYYNYNYYNNNNNNNYNNYYYNNYYNYNYNNYYYNNNYYYN?YYYYYNYN?YNYNNYNYNYYYNYY"];
-  const p = S.computeProfile(ex);
+  const p = computeProfile(smil, ex);
   const raw = { L: 4, F: 7, K: 19, "1": 9, "2": 16, "3": 29, "4": 20, "6": 11, "7": 12, "8": 14, "9": 18, "0": 14 };
   for (const [s, v] of Object.entries(raw)) assert.equal(p.raw[s], v, "сырой " + s);
   assert.deepEqual(p.kAdd, { "1": 10, "4": 8, "7": 19, "8": 19, "9": 4 });
@@ -48,29 +50,29 @@ test("psytests: пример результата (женщина) — сыры�
 });
 
 test("поправка K: округление, половина вверх, исключения таблицы при K = 1 и 3", () => {
-  assert.deepEqual(S.kCorrection(0), { "1": 0, "4": 0, "7": 0, "8": 0, "9": 0 });
-  assert.deepEqual(S.kCorrection(1), { "1": 1, "4": 1, "7": 1, "8": 1, "9": 0 });
-  assert.deepEqual(S.kCorrection(2), { "1": 1, "4": 1, "7": 2, "8": 2, "9": 0 });
-  assert.deepEqual(S.kCorrection(3), { "1": 2, "4": 2, "7": 3, "8": 3, "9": 1 });
-  assert.deepEqual(S.kCorrection(9), { "1": 5, "4": 4, "7": 9, "8": 9, "9": 2 });
-  assert.deepEqual(S.kCorrection(19), { "1": 10, "4": 8, "7": 19, "8": 19, "9": 4 });
-  assert.deepEqual(S.kCorrection(29), { "1": 15, "4": 12, "7": 29, "8": 29, "9": 6 });
+  assert.deepEqual(smil.kCorrection(0), { "1": 0, "4": 0, "7": 0, "8": 0, "9": 0 });
+  assert.deepEqual(smil.kCorrection(1), { "1": 1, "4": 1, "7": 1, "8": 1, "9": 0 });
+  assert.deepEqual(smil.kCorrection(2), { "1": 1, "4": 1, "7": 2, "8": 2, "9": 0 });
+  assert.deepEqual(smil.kCorrection(3), { "1": 2, "4": 2, "7": 3, "8": 3, "9": 1 });
+  assert.deepEqual(smil.kCorrection(9), { "1": 5, "4": 4, "7": 9, "8": 9, "9": 2 });
+  assert.deepEqual(smil.kCorrection(19), { "1": 10, "4": 8, "7": 19, "8": 19, "9": 4 });
+  assert.deepEqual(smil.kCorrection(29), { "1": 15, "4": 12, "7": 29, "8": 29, "9": 6 });
 });
 
 test("Т: дробь от 0,6 округляется вверх, до 0,6 — вниз", () => {
-  assert.equal(S.tScore("1", 18).t, 68); // 67,69
-  assert.equal(S.tScore("4", 23).t, 60); // 60,51
-  assert.equal(S.tScore("K", 0).t, 27); // 27,59
-  assert.equal(S.tScore("2", 0).t, 10); // 9,61
+  assert.equal(smil.tScore("1", 18).t, 68); // 67,69
+  assert.equal(smil.tScore("4", 23).t, 60); // 60,51
+  assert.equal(smil.tScore("K", 0).t, 27); // 27,59
+  assert.equal(smil.tScore("2", 0).t, 10); // 9,61
 });
 
 test("достоверность: L или K выше 70 Т, F выше 80 Т", () => {
-  assert.equal(S.computeProfile([]).validity.valid, true); // L 35, F 33, K 27
-  const bad = (answers) => S.computeProfile(answers).validity.checks.filter((c) => c.exceeded).map((c) => c.scale);
+  assert.equal(computeProfile(smil, []).validity.valid, true); // L 35, F 33, K 27
+  const bad = (answers: MaybeAnswer[]) => computeProfile(smil, answers).validity.checks.filter((c) => c.exceeded).map((c) => c.scale);
   assert.deepEqual(bad(fill("N")), ["L", "F", "K"]); // L 87, F 105, K 81
   assert.deepEqual(bad(fill("Y")), ["F"]); // F 196
-  assert.equal(S.validity({ L: 70, F: 80, K: 70 }).valid, true); // ровно на границе — ещё достоверно
-  assert.equal(S.validity({ L: 71, F: 81, K: 71 }).checks.every((c) => c.exceeded && c.reason), true);
+  assert.equal(smil.validity({ raw: {}, t: { L: 70, F: 80, K: 70 } }).valid, true); // ровно на границе — ещё достоверно
+  assert.equal(smil.validity({ raw: {}, t: { L: 71, F: 81, K: 71 } }).checks.every((c) => c.exceeded && c.reason), true);
 });
 
 test("данные: 566 утверждений, 27 контрольных, пункт 26 не входит в шкалу 5", () => {
@@ -83,5 +85,5 @@ test("данные: 566 утверждений, 27 контрольных, пу�
 });
 
 test("ключ вопроса 20: F «Нет», 4 «Нет», 8 «Нет»", () => {
-  assert.deepEqual(S.QUESTION_KEYS[19], [{ scale: "F", answer: "N" }, { scale: "4", answer: "N" }, { scale: "8", answer: "N" }]);
+  assert.deepEqual(questionKeys(smil)[19], [{ scale: "F", answer: "N" }, { scale: "4", answer: "N" }, { scale: "8", answer: "N" }]);
 });

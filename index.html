@@ -8,8 +8,8 @@
   <meta name="description" content="СМОЛ (Мини-Мульт, 71 вопрос) и СМИЛ (566 утверждений): шкалы и профиль пересчитываются после каждого ответа.">
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://morphellis.github.io/Small/">
   <meta property="og:title" content="MMPI">
@@ -26,81 +26,9 @@
       document.documentElement.setAttribute("data-theme", t);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=25">
+  <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
-  <!-- Верх (липкий): управление, что изменил последний ответ, все шкалы одной полоской -->
-  <header class="panel" id="panel" aria-label="Баллы">
-    <div class="wrap">
-      <div class="panel-head">
-        <div class="test-switch" role="tablist" aria-label="Тест">
-          <button type="button" role="tab" data-test="smol" title="Мини-Мульт"><b>СМОЛ</b><small>71 вопрос</small></button>
-          <button type="button" role="tab" data-test="smil" title="Л. Н. Собчик"><b>СМИЛ</b><small>566 утверждений</small></button>
-        </div>
-        <details class="validity" id="validity"><summary id="validitySum"></summary><div class="validity-body" id="validityBody"></div></details>
-        <span class="spacer"></span>
-        <span class="toast" id="toast" role="status" aria-live="polite"></span>
-        <button type="button" class="btn btn-key" id="keyBtn" aria-pressed="false"><span class="long">Показать ключ</span><span class="short">Ключ</span></button>
-        <button type="button" class="btn btn-ghost" id="toggleProfile" aria-pressed="true"><span class="long">Профиль</span><span class="short">Профиль</span></button>
-        <button type="button" class="btn btn-theme" id="themeBtn" aria-label="Переключить тему" title="Тёмная / светлая тема"></button>
-        <button type="button" class="btn btn-reset" id="resetBtn" title="Сбросить результаты" aria-label="Сбросить результаты"><span class="long">Сбросить</span><span class="short">↺</span></button>
-      </div>
-      <div class="impact" id="impact" aria-live="polite"></div>
-      <div class="strip" id="strip"></div>
-    </div>
-  </header>
-
-  <div class="wrap layout" id="layout">
-    <main class="main">
-      <p class="keys-hint" id="hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · <kbd>3</kbd> Не знаю · <kbd>0</kbd> снять ответ · <kbd>↑</kbd><kbd>↓</kbd> другой вопрос</p>
-      <ol class="questions" id="questions"></ol>
-
-      <section class="sheet" aria-labelledby="sheetTitle">
-        <h2 id="sheetTitle">Регистрационный лист</h2>
-        <div class="sheet-scroll"><div class="sheet-grid" id="sheetGrid"></div></div>
-        <ul class="legend">
-          <li><span class="cell st-empty"></span>нет ответа</li>
-          <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>«Да» или «Нет» с первого раза</li>
-          <li><span class="cell st-changed a-N">Н</span>ответ менялся (Да ↔ Нет или после «Не знаю»)</li>
-          <li><span class="cell st-dk a-dk">?</span>«Не знаю»</li>
-          <li><span class="cell st-dkAfter a-dk">?</span>сначала «Да»/«Нет», затем «Не знаю»</li>
-        </ul>
-      </section>
-    </main>
-
-    <!-- Подробный профиль: колонка справа на широком экране, выезжающая снизу шторка на телефоне и планшете (кнопка «Профиль») -->
-    <aside class="side" id="side" aria-label="Подробный профиль">
-      <div class="side-top">
-        <div class="side-head"><b>Профиль</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть профиль">✕</button></div>
-        <div class="view-switch" role="tablist" aria-label="Вид профиля">
-          <button type="button" role="tab" data-view="table">Таблица</button>
-          <button type="button" role="tab" data-view="bars">Шкалы</button>
-          <button type="button" role="tab" data-view="chart">График</button>
-        </div>
-      </div>
-      <div class="chart-wrap" id="chartWrap">
-        <div class="bars" id="bars"></div>
-        <svg id="chart" viewBox="0 0 600 290" role="img" aria-label="Профиль Т-баллов"></svg>
-      </div>
-      <div class="table-wrap" id="tableWrap">
-        <table class="scores" id="scoreTable">
-          <thead>
-            <tr><th class="num">Т-баллы</th><th class="num">Сырые</th><th>Шкалы</th><th class="num" title="Изменение Т после последнего ответа">Δ Т</th></tr>
-          </thead>
-          <tbody id="scoreBody"></tbody>
-        </table>
-      </div>
-    </aside>
-  </div>
-
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Профиль: таблица · шкалы · график</button>
-
-  <script src="data.js?v=25"></script>
-  <script src="scoring.js?v=25"></script>
-  <script src="hints.js?v=25"></script>
-  <script src="smil-data.js?v=25"></script>
-  <script src="smil-scoring.js?v=25"></script>
-  <script src="smil-hints.js?v=25"></script>
-  <script src="app.js?v=25"></script>
+  <div id="app"></div>
 </body>
 </html>

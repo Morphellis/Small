@@ -1,12 +1,16 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const S = require("../scoring.js");
-const D = require("../data.js");
+import assert from "node:assert/strict";
+import { test } from "vitest";
+import { cellState, changedScales, computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
+import type { MaybeAnswer } from "../src/kinds/questionnaire/types";
+import { SMOL_DATA as D } from "../src/tests/smol/data";
+import { createSmol, smol, smolKCorrection } from "../src/tests/smol/definition";
+
+const classicFormula = createSmol({ key: "classic", tMethod: "formula" });
 
 const ORDER = ["L", "F", "K", "1", "2", "3", "4", "6", "7", "8", "9"];
-const fill = (fn) => Array.from({ length: 71 }, (_, i) => fn(i + 1));
+const fill = (fn: (q: number) => MaybeAnswer) => Array.from({ length: 71 }, (_, i) => fn(i + 1));
 
-function check(p, raw, corrected, t) {
+function check(p: ReturnType<typeof computeProfile>, raw: number[], corrected: number[], t: number[]) {
   ORDER.forEach((s, i) => {
     assert.equal(p.raw[s], raw[i], `сырой ${s}`);
     assert.equal(p.corrected[s], corrected[i], `с поправкой ${s}`);
@@ -15,7 +19,7 @@ function check(p, raw, corrected, t) {
 }
 
 test("все «Верно», мужской", () => {
-  const p = S.computeProfile(fill(() => "Y"), "formula", "classic");
+  const p = computeProfile(classicFormula, fill(() => "Y"));
   check(p,
     [0, 12, 0, 9, 8, 9, 11, 10, 13, 18, 11],
     [0, 12, 0, 9, 8, 9, 11, 10, 13, 18, 11],
@@ -23,7 +27,7 @@ test("все «Верно», мужской", () => {
 });
 
 test("все «Не знаю», мужской", () => {
-  const p = S.computeProfile(fill(() => "?"), "formula", "classic");
+  const p = computeProfile(classicFormula, fill(() => "?"));
   check(p,
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -32,88 +36,88 @@ test("все «Не знаю», мужской", () => {
 });
 
 test("поправка K = 9 даёт +5, +4, +9, +9, +2", () => {
-  assert.deepEqual(S.kCorrection(9), { "1": 5, "4": 4, "7": 9, "8": 9, "9": 2 });
+  assert.deepEqual(smol.kCorrection(9), { "1": 5, "4": 4, "7": 9, "8": 9, "9": 2 });
   // у psytests при K = 5 к шкале 1 прибавляется 2, по бланку — 3
-  assert.equal(S.kCorrection(5)["1"], 2);
-  assert.equal(S.kCorrection(5, "table", "classic")["1"], 3);
-  assert.deepEqual(S.kCorrection(0), { "1": 0, "4": 0, "7": 0, "8": 0, "9": 0 });
+  assert.equal(smol.kCorrection(5)["1"], 2);
+  assert.equal(smolKCorrection(5, { kMode: "table", key: "classic" })["1"], 3);
+  assert.deepEqual(smol.kCorrection(0), { "1": 0, "4": 0, "7": 0, "8": 0, "9": 0 });
 });
 
 test("таблица поправок совпадает с округлением k*K только там, где совпадает бланк", () => {
   // Контроль переключателя: при K = 1 бланк даёт +1 к шкале 4, формула round(0.4) = 0.
-  assert.equal(S.kCorrection(1, "table")["4"], 1);
-  assert.equal(S.kCorrection(1, "formula", "classic")["4"], 0);
+  assert.equal(smolKCorrection(1, { kMode: "table" })["4"], 1);
+  assert.equal(smolKCorrection(1, { kMode: "formula", key: "classic" })["4"], 0);
 });
 
 test("пустые ответы не дают баллов, Т считаются и без ответов", () => {
-  const p = S.computeProfile([]);
+  const p = computeProfile(smol, []);
   ORDER.forEach((s) => assert.equal(p.raw[s], 0));
   assert.equal(Math.round(p.t.L), 40); // лист, мужской: L = 0 → 39.5
   assert.equal(p.answered, 0);
 });
 
 test("«Не знаю» не попадает ни в одну шкалу и увеличивает счётчик", () => {
-  const a = new Array(71).fill(null);
+  const a = new Array<MaybeAnswer>(71).fill(null);
   a[8] = "?"; // вопрос 9 входит в F, 1, 2, 3 по ответу «Да»
-  const p = S.computeProfile(a);
+  const p = computeProfile(smol, a);
   ORDER.forEach((s) => assert.equal(p.raw[s], 0));
   assert.equal(p.dontKnow, 1);
 });
 
 test("ответ, меняющий K, подсвечивает и шкалы с поправкой", () => {
-  const before = S.computeProfile([]);
-  const a = new Array(71).fill(null);
+  const before = computeProfile(smol, []);
+  const a = new Array<MaybeAnswer>(71).fill(null);
   a[22] = "N"; // вопрос 23: K «Нет», 3 «Нет»
-  const after = S.computeProfile(a);
-  assert.deepEqual(S.changedScales(before, after), ["K", "3", "1", "4", "7", "8"].sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y)));
+  const after = computeProfile(smol, a);
+  assert.deepEqual(changedScales(smol, before, after), ["K", "3", "1", "4", "7", "8"].sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y)));
 });
 
 test("ответ, не засчитанный ни в одну шкалу, ничего не меняет", () => {
-  const before = S.computeProfile([]);
-  const a = new Array(71).fill(null);
+  const before = computeProfile(smol, []);
+  const a = new Array<MaybeAnswer>(71).fill(null);
   a[19] = "Y"; // вопрос 20 у psytests входит только в F по ответу «Нет»
-  assert.deepEqual(S.changedScales(before, S.computeProfile(a)), []);
-  assert.deepEqual(S.QUESTION_KEYS[19], [{ scale: "F", answer: "N" }]);
+  assert.deepEqual(changedScales(smol, before, computeProfile(smol, a)), []);
+  assert.deepEqual(questionKeys(smol)[19], [{ scale: "F", answer: "N" }]);
 });
 
 test("ключ вопроса 9: F, 1, 2, 3 — все по «Да»", () => {
-  assert.deepEqual(S.QUESTION_KEYS[8], [
+  assert.deepEqual(questionKeys(smol)[8], [
     { scale: "F", answer: "Y" }, { scale: "1", answer: "Y" }, { scale: "2", answer: "Y" }, { scale: "3", answer: "Y" }
   ]);
 });
 
 test("состояния регистрационного листа", () => {
-  assert.equal(S.cellState([], null), "empty");
-  assert.equal(S.cellState(["Y"], "Y"), "first");
-  assert.equal(S.cellState(["Y", "N"], "N"), "changed");
-  assert.equal(S.cellState(["Y", null, "Y"], "Y"), "first");
-  assert.equal(S.cellState(["?"], "?"), "dk");
-  assert.equal(S.cellState(["N", "?"], "?"), "dkAfter");
-  assert.equal(S.cellState(["Y", null], null), "empty");
+  assert.equal(cellState([], null), "empty");
+  assert.equal(cellState(["Y"], "Y"), "first");
+  assert.equal(cellState(["Y", "N"], "N"), "changed");
+  assert.equal(cellState(["Y", null, "Y"], "Y"), "first");
+  assert.equal(cellState(["?"], "?"), "dk");
+  assert.equal(cellState(["N", "?"], "?"), "dkAfter");
+  assert.equal(cellState(["Y", null], null), "empty");
 });
 
 test("достоверность: L > 4 или F > 6 — недостоверно", () => {
-  const allNo = S.computeProfile(fill(() => "N")); // L = 5, F = 3
+  const allNo = computeProfile(smol, fill(() => "N")); // L = 5, F = 3
   assert.equal(allNo.validity.valid, false);
   assert.deepEqual(allNo.validity.checks.filter((c) => c.exceeded).map((c) => c.scale), ["L"]);
-  const allYes = S.computeProfile(fill(() => "Y")); // L = 0, F = 12
+  const allYes = computeProfile(smol, fill(() => "Y")); // L = 0, F = 12
   assert.equal(allYes.validity.valid, false);
   assert.deepEqual(allYes.validity.checks.filter((c) => c.exceeded).map((c) => c.scale), ["F"]);
-  assert.equal(S.validity({ L: 4, F: 6 }).valid, true); // ровно на границе — ещё достоверно
-  assert.equal(S.validity({ L: 5, F: 7 }).checks.every((c) => c.exceeded && c.reason), true);
-  assert.equal(S.computeProfile([]).validity.valid, true);
+  assert.equal(smol.validity({ raw: { L: 4, F: 6 }, t: {} }).valid, true); // ровно на границе — ещё достоверно
+  assert.equal(smol.validity({ raw: { L: 5, F: 7 }, t: {} }).checks.every((c) => c.exceeded && c.reason), true);
+  assert.equal(computeProfile(smol, []).validity.valid, true);
 });
 
 test("по умолчанию Т считаются по профильному листу, как на psytests.org", () => {
-  assert.equal(S.T_METHOD, "sheet");
-  assert.equal(S.tScore("F", 10).t, 78);
-  assert.equal(S.tScore("K", 0).t, 29);
+  assert.equal(smol.tDigits, 0);
+  assert.equal(smol.tScore("F", 10).t, 78);
+  assert.equal(smol.tScore("K", 0).t, 29);
 });
 test("профильный лист: за краем — продление по прямой с пометкой", () => {
-  const inside = S.tScore("7", 20);
+  const inside = smol.tScore("7", 20);
   assert.equal(inside.extrapolated, false);
   assert.equal(inside.t, 77);
-  const out = S.tScore("7", 30); // лист кончается на 27
+  const out = smol.tScore("7", 30); // лист кончается на 27
   assert.equal(out.extrapolated, true);
   assert.ok(out.t > 107.3 && out.t < 125);
   for (const s of Object.keys(D.profileSheet)) {
@@ -123,10 +127,10 @@ test("профильный лист: за краем — продление по
 });
 
 test("ключ psytests воспроизводит все 14 прогонов их теста (мужчина)", () => {
-  const bit = (b) => { let p = ""; for (let q = 1; q <= 71; q++) p += (q >> b) & 1 ? "Y" : "N"; return p; };
-  const conv = (p) => [...p].map((c) => (c === "1" || c === "Y" ? "Y" : "N"));
+  const bit = (b: number) => { let p = ""; for (let q = 1; q <= 71; q++) p += (q >> b) & 1 ? "Y" : "N"; return p; };
+  const conv = (p: string) => [...p].map((c) => (c === "1" || c === "Y" ? "Y" : "N"));
   // порядок: 1, 2, 3, 4, 6, 7, 8, 9, L, F, K — сырые баллы; затем Т-баллы psytests
-  const runs = [
+  const runs: [string, number[], number[]][] = [
     ["N".repeat(71), [5,10,17,8,4,3,1,1,5,2,16], [66,61,74,67,47,73,56,35,78,46,73]],
     ["Y".repeat(71), [9,9,9,11,10,13,19,11,0,10,0], [51,58,44,53,82,48,63,80,40,78,29]],
     [bit(0), [5,9,9,8,5,9,8,5,1,7,5], [44,58,44,49,53,52,42,48,47,66,43]],
@@ -144,7 +148,7 @@ test("ключ psytests воспроизводит все 14 прогонов и
   ];
   const order = ["1","2","3","4","6","7","8","9","L","F","K"];
   for (const [p, raw, t] of runs) {
-    const prof = S.computeProfile(conv(p));
+    const prof = computeProfile(smol, conv(p));
     order.forEach((s, i) => {
       assert.equal(prof.raw[s], raw[i], `сырой ${s} для ${p.slice(0, 12)}…`);
       assert.equal(Math.round(prof.t[s]), t[i], `Т ${s} для ${p.slice(0, 12)}…`);

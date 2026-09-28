@@ -1,6 +1,0 @@
-# GitHub Pages: на сайт попадают только файлы самого сайта.
-exclude:
-  - tests
-  - tools
-  - package.json
-  - README.md
