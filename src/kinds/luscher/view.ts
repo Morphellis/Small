@@ -59,7 +59,7 @@ function stepTitle(def: LuscherDef, step: Step): string {
 
 function question(def: LuscherDef, step: Step, k: number): string {
   const dislike = isDislikePhase(def.variant, step, k);
-  const word = dislike ? "<b>неприятен</b>" : "<b>симпатичен</b>";
+  const word = dislike ? `<b class="w-dis">неприятен</b>` : `<b class="w-like">симпатичен</b>`;
   switch (step.kind) {
     case "achromatic":
       return k === 0 ? `Какой из этих пяти цветов вам наиболее ${word}?` : `Какой из оставшихся цветов вам наиболее ${word}?`;
@@ -68,7 +68,7 @@ function question(def: LuscherDef, step: Step, k: number): string {
     case "pairs":
       return `Какой из этих двух цветов вам более <b>симпатичен</b>? <span class="lu-count">Пара ${k + 1} из 6</span>`;
     case "figures":
-      return dislike ? `Выберите две <b>несимпатичные</b> вам фигуры (${k - 1} из 2).` : `Выберите две <b>симпатичные</b> вам фигуры (${k + 1} из 2).`;
+      return dislike ? `Выберите две <b class="w-dis">несимпатичные</b> вам фигуры (${k - 1} из 2).` : `Выберите две <b class="w-like">симпатичные</b> вам фигуры (${k + 1} из 2).`;
     case "pause":
       return "";
   }
@@ -150,10 +150,10 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   bindTestSwitch(root, ctx, signal);
   bindThemeButton($("luTheme"), signal);
 
-  // Логика теста: раскрыта, пока её не свернули (запоминается для обоих вариантов).
+  // Логика теста: свёрнута, пока её не раскрыли (запоминается для обоих вариантов).
   const guide = $<HTMLDetailsElement>("luGuide");
   guide.innerHTML = guideHtml(def);
-  guide.open = readString(GUIDE_KEY) !== "closed";
+  guide.open = readString(GUIDE_KEY) === "open";
   guide.addEventListener("toggle", () => writeString(GUIDE_KEY, guide.open ? "open" : "closed"), { signal });
 
   function replayValid(log: Pick[]): Pick[] {
@@ -243,7 +243,10 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
 
     stageEl.innerHTML = `
       <div class="lu-step-head"><span class="lu-step-no">Шаг ${idx} из ${all.length}</span><h2>${escapeHtml(stepTitle(def, step))}</h2></div>
-      ${step.kind === "pause" ? "" : `<p class="lu-ask${isDislikePhase(V, step, k) ? " dis" : ""}">${question(def, step, k)}</p>`}
+      ${step.kind === "pause" ? "" : `<p class="lu-ask${isDislikePhase(V, step, k) ? " dis" : ""}">${question(def, step, k)}${
+        step.kind === "pairs" ? "" : isDislikePhase(V, step, k)
+          ? ` <span class="lu-pill dis">выбираете, какой не нравится</span>`
+          : ` <span class="lu-pill like">выбираете, какой нравится</span>`}</p>`}
       ${note}
       ${body}
       ${chosen}

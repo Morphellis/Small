@@ -4,66 +4,75 @@
  */
 
 :root {
-  --bg: #f5f6f8;
+  --bg: #f6f7fa;
   --surface: #ffffff;
-  --surface-2: #eef0f3;
+  --surface-2: #eef1f5;
   --text: #1a1d22;
-  --muted: #646b76;
-  --border: #d9dde3;
-  --accent: #2563eb;
+  --muted: #55606e;
+  --border: #dde1e7;
+  --border-strong: #cbd1da;
+  --accent: #3b6fe0;
+  --accent-ink: #ffffff;
   --ctrl: #2f7de1;
-  --clin: #d08c00;
-  --hl: #d92d20;
+  --clin: #b8790a;
+  --hl: #e0473c;
   --hl-bg: #fdeceb;
-  --yes: #2563eb;
+  --yes: #3b6fe0;
   --no: #c2410c;
   --dk: #6b7280;
-  --key: #16a34a;
-  --key-bg: #e8f7ee;
+  --key: #1f9d52;
+  --key-bg: #e7f8ee;
   --high: #c2410c;
   --low: #1d6fb8;
   --low-bg: #e6f1fb;
-  --grid: #eceef1;
-  --grid-strong: #d3d8de;
-  --band: rgba(37, 99, 235, 0.06);
+  --grid: #eef0f3;
+  --grid-strong: #d7dce3;
+  --band: rgba(59, 111, 224, 0.07);
   --shadow: 0 2px 10px rgba(16, 24, 40, 0.08);
-  --radius: 8px;
+  --shadow-sheet: 0 -8px 28px rgba(16, 24, 40, 0.16);
+  --radius: 12px;
+  --r-sm: 8px;
+  --r-lg: 16px;
+  --r-pill: 999px;
   --bar-mid: #1e8a2e;
   --bar-out: #d7263d;
   --bar-track: #eef0f3;
-  --panel-h: 190px; /* высота липкой панели, уточняется из app.js */
+  --panel-h: 190px; /* высота липкой панели, уточняется из view.ts */
   color-scheme: light;
 }
 
 /* тёмная тема: data-theme ставит скрипт в index.html (сохранённый выбор или тема системы) */
 
 :root[data-theme="dark"] {
-  --bg: #0f1115;
-  --surface: #171a20;
-  --surface-2: #20242c;
-  --text: #e6e8eb;
-  --muted: #9aa2ad;
-  --border: #2c313a;
-  --accent: #5b8def;
-  --ctrl: #60a5fa;
+  --bg: #12151b;
+  --surface: #1a1d24;
+  --surface-2: #232830;
+  --text: #eceef1;
+  --muted: #aab2bd;
+  --border: #2f3540;
+  --border-strong: #3a4150;
+  --accent: #6f9cf5;
+  --accent-ink: #0c1220;
+  --ctrl: #6bb0ff;
   --clin: #f0b429;
-  --hl: #ff6b61;
-  --hl-bg: rgba(255, 107, 97, 0.13);
-  --yes: #3b82f6;
+  --hl: #ff7a6e;
+  --hl-bg: rgba(255, 122, 110, 0.16);
+  --yes: #5c93f2;
   --no: #ea6a2a;
-  --dk: #7b8491;
-  --key: #34c46b;
-  --key-bg: rgba(52, 196, 107, 0.12);
+  --dk: #8a93a1;
+  --key: #3ecb76;
+  --key-bg: rgba(62, 203, 118, 0.16);
   --high: #ff8a4c;
   --low: #6cb4ff;
-  --low-bg: rgba(108, 180, 255, 0.13);
-  --grid: #22262d;
-  --grid-strong: #343a44;
-  --band: rgba(91, 141, 239, 0.08);
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
-  --bar-mid: #2fa14a;
-  --bar-out: #e5485d;
-  --bar-track: #242932;
+  --low-bg: rgba(108, 180, 255, 0.16);
+  --grid: #262b33;
+  --grid-strong: #3a4150;
+  --band: rgba(111, 156, 245, 0.10);
+  --shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+  --shadow-sheet: 0 -8px 28px rgba(0, 0, 0, 0.5);
+  --bar-mid: #34b356;
+  --bar-out: #ff5468;
+  --bar-track: #262b33;
   color-scheme: dark;
 }
 
@@ -80,9 +89,11 @@ body {
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.wrap { max-width: 1360px; margin: 0 auto; padding: 0 16px; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 0 20px; }
 
-h2 { margin: 0; font-weight: 650; font-size: 15px; }
+h2 { margin: 0; font-weight: 700; font-size: 16px; }
+
+b, strong { font-weight: 650; }
 
 kbd {
   display: inline-block;
@@ -109,41 +120,42 @@ kbd {
 
 .panel.unstick { position: relative; }
 
-.panel .wrap { padding-bottom: 8px; }
+.panel .wrap { padding-bottom: 10px; }
 
 /* строка 1: тест · достоверность · кнопки */
 
-.panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 0 6px; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0 8px; }
 
 .spacer { flex: 1; }
 
-.test-switch { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.test-switch { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); }
 
 .test-switch button {
-  display: flex; align-items: baseline; gap: 7px; padding: 5px 12px;
-  border: 0; background: var(--surface-2); color: var(--text); cursor: pointer; line-height: 1.2;
+  display: flex; align-items: baseline; gap: 6px; padding: 7px 16px;
+  border: 0; background: transparent; color: var(--text); cursor: pointer; line-height: 1.2; white-space: nowrap;
 }
 
 .test-switch button + button { border-left: 1px solid var(--border); }
 
-.test-switch button b { font-size: 16px; font-weight: 750; letter-spacing: 0.04em; }
+.test-switch button b { font-size: 15px; font-weight: 750; letter-spacing: 0.02em; }
 
-.test-switch button small { font-size: 12px; color: var(--muted); }
+.test-switch button small { font-size: 11.5px; color: var(--muted); }
 
 .test-switch button:hover { background: var(--grid-strong); }
 
-.test-switch button.on { background: var(--accent); color: #fff; }
+.test-switch button.on { background: var(--accent); color: var(--accent-ink); }
 
-.test-switch button.on small { color: rgba(255, 255, 255, 0.85); }
+.test-switch button.on small { color: inherit; opacity: 0.85; }
 
 .test-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .btn {
-  padding: 5px 12px;
+  padding: 7px 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
-  font-size: 13px;
+  color: var(--text);
+  font-size: 13.5px;
   line-height: 1.4;
   cursor: pointer;
   white-space: nowrap;
@@ -153,7 +165,9 @@ kbd {
 
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.btn-key[aria-pressed="true"] { background: var(--key); border-color: var(--key); color: #fff; font-weight: 600; }
+.btn-key[aria-pressed="true"] { background: var(--key); border-color: var(--key); color: #fff; font-weight: 650; }
+
+:root[data-theme="dark"] .btn-key[aria-pressed="true"] { color: #0c1a12; }
 
 .btn-ghost { background: transparent; }
 
@@ -165,7 +179,7 @@ kbd {
 
 .btn .short { display: none; }
 
-.btn-theme { min-width: 34px; padding: 5px 8px; background: transparent; }
+.btn-theme { min-width: 38px; padding: 7px; border-radius: var(--r-pill); background: transparent; text-align: center; }
 
 .toast { font-size: 13px; color: var(--key); }
 
@@ -181,19 +195,20 @@ kbd {
 
 @media (max-width: 640px) {
   body { font-size: 14.5px; }
-  .wrap { padding: 0 10px; }
   .panel-head { padding: 6px 0 4px; }
   .panel-head { gap: 4px; }
-  .btn { min-height: 34px; padding: 3px 8px; font-size: 12.5px; }
+  .wrap { padding: 0 12px; }
+  .btn { min-height: 36px; padding: 4px 10px; font-size: 13px; }
   .btn .long { display: none; }
   .btn .short { display: inline; }
   .btn-theme { min-width: 34px; padding: 3px 5px; }
-  .test-switch button { min-height: 34px; align-items: center; padding: 4px 8px; }
+  .test-switch button { min-height: 36px; align-items: center; padding: 5px 12px; }
   .test-switch button b { font-size: 14px; letter-spacing: 0.02em; }
   /* переключатель тестов — отдельной строкой во всю ширину, кнопки ниже; тестов много — строка листается вбок */
   .test-switch { flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; }
   .test-switch::-webkit-scrollbar { display: none; }
   .test-switch button { flex: 1 0 auto; justify-content: center; }
+  .test-switch { max-width: 100%; }
 }
 
 /* совсем узкий телефон (320–360): шапка в одну строку */
@@ -209,7 +224,7 @@ kbd {
 /* сенсорные экраны: кнопки ответа под палец */
 
 @media (pointer: coarse) {
-  .panel-head .btn, .test-switch button { min-height: 36px; }
+  .panel-head .btn, .test-switch button { min-height: 44px; }
 }
 
 /* низкий экран (телефон в альбомной ориентации): панель поплотнее */

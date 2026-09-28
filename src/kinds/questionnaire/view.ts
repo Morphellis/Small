@@ -35,6 +35,8 @@ interface State {
   /** Боковая колонка (на узком экране — шторка снизу). */
   showProfile: boolean;
   profileView: ProfileView;
+  /** Полоска шкал целиком; иначе — отслеживаемые шкалы и только что изменившиеся. */
+  stripAll: boolean;
 }
 
 /** Что лежит в localStorage. Формат прежний: иначе у людей пропадут сохранённые ответы. */
@@ -46,12 +48,17 @@ interface Saved {
   showProfileWide?: boolean;
   profileView?: string;
   viewV?: number;
+  stripAll?: boolean;
 }
 
 const LETTER: Record<Answer, string> = { Y: "Д", N: "Н", "?": "?" };
 const WORD: Record<Answer, string> = { Y: "Да", N: "Нет", "?": "Не знаю" };
 const levelWord: Record<string, string> = { high: "высокое", low: "низкое" };
 const isAnswer = (v: unknown): v is Answer => v === "Y" || v === "N" || v === "?";
+const plural = (n: number, one: string, few: string, many: string) => {
+  const d = n % 10, dd = n % 100;
+  return d === 1 && dd !== 11 ? one : d >= 2 && d <= 4 && (dd < 12 || dd > 14) ? few : many;
+};
 const scalesWord = (list: string[]) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
 
 function layoutHtml(ctx: AppContext, dk: boolean): string {
@@ -173,7 +180,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     cur: 0,
     last: null,
     showProfile: true,
-    profileView: "table"
+    profileView: "table",
+    stripAll: false
   };
   let profile: Profile = profileOf(state.answers);
 
@@ -181,7 +189,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   function persist() {
     const saved: Saved = {
       answers: state.answers, history: state.history,
-      keyMode: state.keyMode, showProfile: state.showProfile, showProfileWide: WIDE.matches, profileView: state.profileView, viewV: 2
+      keyMode: state.keyMode, showProfile: state.showProfile, showProfileWide: WIDE.matches, profileView: state.profileView, viewV: 2,
+      stripAll: state.stripAll
     };
     writeJson(def.storageKey, saved);
   }
@@ -203,6 +212,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     });
     state.last = null;
     if (typeof saved.keyMode === "boolean") state.keyMode = saved.keyMode;
+    if (typeof saved.stripAll === "boolean") state.stripAll = saved.stripAll;
     if (typeof saved.showProfile === "boolean" && WIDE.matches === (saved.showProfileWide !== false)) state.showProfile = saved.showProfile;
     if (saved.viewV === 2 && (saved.profileView === "bars" || saved.profileView === "chart" || saved.profileView === "table")) state.profileView = saved.profileView;
   }
@@ -422,7 +432,9 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
 
   function renderStrip() {
     const changed = new Set(state.last ? state.last.changed : []);
-    const cells = ORDER.map((s) => {
+    let hidden = 0;
+    const cells = ORDER.flatMap((s) => {
+      if (!state.stripAll && !FOCUS.has(s) && !changed.has(s)) { hidden++; return []; }
       const g = def.scaleInfo[s].group === "control" ? "ctrl" : "clin";
       const lvl = profile.level[s] ? "lv-" + profile.level[s] : "";
       const t = (profile.extrapolated[s] ? "≈" : "") + Math.round(profile.t[s]);
@@ -434,10 +446,13 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
         dt = `<em>${signed(diff, Math.min(def.tDigits, 1))}</em>`;
         if (diff < 0) dn = "dn";
       }
-      return `<div class="sc ${g} ${lvl} ${over} ${dn} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}: Т ${t}, сырые с поправкой ${profile.corrected[s]}"><b>${s}</b>${dt}<span>${t}</span><small>${profile.corrected[s]}</small></div>`;
+      return [`<div class="sc ${g} ${lvl} ${over} ${dn} ${changed.has(s) ? "changed" : ""} ${FOCUS.has(s) ? "" : "other"}" title="${scaleLabel(s)}: Т ${t}, сырые с поправкой ${profile.corrected[s]}"><b>${s}</b>${dt}<span>${t}</span><small>${profile.corrected[s]}</small></div>`];
     });
-    if (DK) cells.push(`<div class="sc other" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
-    el.strip.style.setProperty("--n", String(cells.length));
+    if (DK && !state.stripAll) hidden++;
+    else if (DK) cells.push(`<div class="sc other" title="Ответов «Не знаю»"><b>?</b><span>${profile.dontKnow}</span><small>&nbsp;</small></div>`);
+    // Неотслеживаемые шкалы свёрнуты в кнопку «ещё N шкал»; изменившаяся шкала видна всегда.
+    if (hidden) cells.push(`<button type="button" class="more-chip" data-more aria-expanded="false">ещё ${hidden} ${plural(hidden, "шкала", "шкалы", "шкал")} ▾</button>`);
+    else if (state.stripAll && ORDER.some((s) => !FOCUS.has(s))) cells.push(`<button type="button" class="more-chip" data-more aria-expanded="true">свернуть ▴</button>`);
     el.strip.innerHTML = cells.join("");
   }
 
@@ -606,6 +621,13 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     // При смене ширины (поворот телефона, окно) возвращаемся к умолчанию: справа колонка, на узком экране шторка закрыта.
     on(WIDE, "change", () => { state.showProfile = WIDE.matches; renderLayout(); });
     on(el.resetBtn, "click", resetAll);
+    on(el.strip, "click", (e) => {
+      if (!(e.target as Element).closest("[data-more]")) return;
+      state.stripAll = !state.stripAll;
+      renderStrip();
+      updatePanelHeight();
+      persist();
+    });
     // Пояснение к достоверности открывается поверх вопросов — закрываем его кликом мимо.
     on(document, "click", (e) => { if (el.validity.open && !el.validity.contains(e.target as Node)) el.validity.open = false; });
 
