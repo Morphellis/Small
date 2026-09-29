@@ -29,6 +29,7 @@ export function startRouter(root: HTMLElement, tests: readonly TestEntry[]): voi
     unmount?.();
     const ctx: AppContext = { tests, currentId: entry.id, switchTo: (id) => { const t = byId(id); if (t) void show(t); } };
     unmount = module.mount(root, ctx);
+    performance.mark("mounted:" + entry.id); // для замеров быстродействия (tools/e2e/perf.mjs)
     // При первом показе браузер сам вернёт прокрутку после перезагрузки; при смене теста — наверх.
     if (!first) window.scrollTo({ top: 0 });
     first = false;

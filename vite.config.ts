@@ -8,10 +8,16 @@ export default defineConfig({
     target: "es2022",
     rollupOptions: {
       output: {
-        // Файл теста называется по его папке: assets/smil-….js, а не assets/index-….js.
+        // Понятные имена файлов: тест — assets/smil-….js, вид теста — assets/kind-questionnaire-….js,
+        // общий код оболочки — assets/shared-….js (а не безликие index-….js).
         chunkFileNames: (chunk) => {
-          const m = chunk.facadeModuleId?.match(/[\/]tests[\/]([^\/]+)[\/]index\.ts$/);
-          return `assets/${m ? m[1] : "[name]"}-[hash].js`;
+          const f = chunk.facadeModuleId ?? "";
+          const test = f.match(/[\/]tests[\/]([^\/]+)[\/]index\.ts$/);
+          if (test) return `assets/${test[1]}-[hash].js`;
+          const kinds = new Set(chunk.moduleIds.map((id) => id.match(/[\/]kinds[\/]([^\/]+)[\/]/)?.[1]).filter(Boolean));
+          if (kinds.size === 1) return `assets/kind-${[...kinds][0]}-[hash].js`;
+          if (chunk.moduleIds.every((id) => /[\/]src[\/]app[\/]/.test(id))) return "assets/shared-[hash].js";
+          return "assets/[name]-[hash].js";
         }
       }
     }

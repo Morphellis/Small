@@ -35,6 +35,12 @@ export type Unmount = () => void;
 
 /** Загруженный тест. */
 export interface TestModule {
+  /**
+   * Вид теста («questionnaire», «luscher», …) и его описание — чтобы автопроверки и инструменты находили
+   * все тесты нужного вида сами. У теста со своим экраном может не быть.
+   */
+  kind?: string;
+  def?: unknown;
   /** Нарисовать тест внутри root. Вернуть функцию, которая всё уберёт. */
   mount(root: HTMLElement, ctx: AppContext): Unmount;
 }

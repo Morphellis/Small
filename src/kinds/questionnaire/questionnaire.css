@@ -3,8 +3,6 @@
  * Подключается вместе с опросником, поэтому не влияет на тесты другого типа.
  */
 
-button, select, input { font: inherit; color: inherit; }
-
 /* достоверность: компактная плашка в первой строке, пояснение раскрывается поверх вопросов */
 
 .validity { position: relative; border: 1px solid var(--key); border-radius: var(--r-pill); background: var(--key-bg); font-size: 13px; }
@@ -134,8 +132,6 @@ button, select, input { font: inherit; color: inherit; }
 .layout.no-side { grid-template-columns: minmax(0, 1fr); }
 
 .layout.no-side .side { display: none; }
-
-.keys-hint { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
 
 .side {
   position: sticky;
@@ -454,7 +450,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .layout { display: block; }
   .layout.no-side .side { display: block; }
   .side {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 30;
     height: clamp(260px, calc(100vh - var(--panel-h)), 86vh);
     height: clamp(260px, calc(100dvh - var(--panel-h)), 86dvh);
     max-height: none; margin: 0; padding: 0 14px 20px;
@@ -481,7 +477,6 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .scores td { padding: 5px 6px; }
   .validity .v-counts { display: none; }
   .validity.bad .v-counts { display: inline; }
-  .keys-hint { display: none; }
 }
 
 /* телефон */

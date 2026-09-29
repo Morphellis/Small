@@ -15,7 +15,7 @@ export function testSwitchHtml(ctx: AppContext): string {
 }
 
 /** Подсветить открытый тест. */
-export function markTestSwitch(container: ParentNode, currentId: string): void {
+function markTestSwitch(container: ParentNode, currentId: string): void {
   for (const b of container.querySelectorAll<HTMLButtonElement>(".test-switch button")) {
     const on = b.dataset.test === currentId;
     b.classList.toggle("on", on);

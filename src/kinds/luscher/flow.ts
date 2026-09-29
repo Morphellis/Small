@@ -88,14 +88,14 @@ export function need(step: Step): number {
 }
 
 /** Выборы по шагам. */
-export function picksByStep(log: Pick[]): Record<string, number[]> {
+export function picksByStep(log: readonly Pick[]): Record<string, number[]> {
   const by: Record<string, number[]> = {};
   for (const p of log) (by[p.step] ??= []).push(p.value);
   return by;
 }
 
 /** Сколько побед у каждой карточки 1–4 в таблице (строка из четырёх цифр, как у psytests: "3120"). */
-export function pairWins(chosen: number[]): string {
+export function pairWins(chosen: readonly number[]): string {
   const w = [0, 0, 0, 0];
   for (const c of chosen) w[c - 1]++;
   return w.join("");
@@ -105,7 +105,7 @@ export function pairWins(chosen: number[]): string {
 export const isStrict = (wins: string) => [...wins].sort().join("") === "0123";
 
 /** Шаги теста с учётом уже сделанных выборов: повтор таблицы появляется, только если первый проход нестрогий. */
-export function steps(variant: Variant, log: Pick[]): Step[] {
+export function steps(variant: Variant, log: readonly Pick[]): Step[] {
   if (variant === "short") {
     return [{ id: "rank1", kind: "rank", n: 1 }, { id: "pause", kind: "pause" }, { id: "rank2", kind: "rank", n: 2 }];
   }
@@ -124,7 +124,7 @@ export function steps(variant: Variant, log: Pick[]): Step[] {
 }
 
 /** Текущий шаг: первый незавершённый. null — тест пройден. */
-export function currentStep(variant: Variant, log: Pick[]): Step | null {
+export function currentStep(variant: Variant, log: readonly Pick[]): Step | null {
   const by = picksByStep(log);
   return steps(variant, log).find((s) => (by[s.id]?.length ?? 0) < need(s)) ?? null;
 }
@@ -137,7 +137,7 @@ export function isDislikePhase(variant: Variant, step: Step, k: number): boolean
 }
 
 /** Итоговый порядок восьмицветового выбора. В полном тесте 6-й выбор — самый неприятный (8-е место), 7-й — 7-е. */
-export function rankOrder(variant: Variant, picks: number[]): string | null {
+export function rankOrder(variant: Variant, picks: readonly number[]): string | null {
   if (picks.length < 7) return null;
   const left = [0, 1, 2, 3, 4, 5, 6, 7].find((c) => !picks.includes(c))!;
   const order = variant === "full" ? [...picks.slice(0, 5), left, picks[6], picks[5]] : [...picks, left];
@@ -145,7 +145,7 @@ export function rankOrder(variant: Variant, picks: number[]): string | null {
 }
 
 /** Итог ахроматического набора (номера карточек): два симпатичных, оставшаяся, два неприятных (самый — последним). */
-export function achromaticOrder(picks: number[]): number[] | null {
+export function achromaticOrder(picks: readonly number[]): number[] | null {
   if (picks.length < 4) return null;
   const left = [0, 1, 2, 3, 4].find((c) => !picks.includes(c))!;
   return [picks[0], picks[1], left, picks[3], picks[2]];
@@ -202,7 +202,7 @@ export function octalTo64(s: string): string {
 }
 
 /** Ссылка на тот же результат на psytests.org — когда тест пройден целиком. */
-export function psytestsUrl(variant: Variant, log: Pick[]): string | null {
+export function psytestsUrl(variant: Variant, log: readonly Pick[]): string | null {
   if (currentStep(variant, log) !== null) return null;
   const by = picksByStep(log);
   let qa = "";

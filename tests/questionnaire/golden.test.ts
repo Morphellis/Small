@@ -1,19 +1,34 @@
 /*
- * Новый движок против эталонов старого подсчёта (tests/fixtures, сняты до переноса на новую архитектуру).
- * Любое расхождение значит, что баллы на сайте поменялись.
+ * Движок против эталонов подсчёта (tests/fixtures/<id>.json, сняты до рефакторингов — tools/make-fixture.ts).
+ * Любое расхождение значит, что баллы на сайте поменялись. Эталон есть у каждого опросника из реестра.
  */
+import fs from "node:fs";
 import { describe, expect, test } from "vitest";
+import { TESTS } from "../../src/app/registry";
+import { isQuestionnaireModule } from "../../src/kinds/questionnaire";
 import { changedScales, computeProfile, questionKeys } from "../../src/kinds/questionnaire/engine";
-import type { QuestionnaireDef } from "../../src/kinds/questionnaire/types";
-import { smil } from "../../src/tests/smil/definition";
-import { smol } from "../../src/tests/smol/definition";
-import smilFixture from "../fixtures/smil.json";
-import smolFixture from "../fixtures/smol.json";
+import type { MaybeAnswer } from "../../src/kinds/questionnaire/types";
 
-const decode = (s: string) => [...s].map((c) => (c === "." ? null : c));
+interface Fixture {
+  questionKeys: unknown;
+  kCorrection: Record<string, number>[];
+  cases: ({ answers: string } & Record<string, unknown>)[];
+  changed: { a: number; b: number; scales: string[] }[];
+}
 
-for (const [def, fx] of [[smol, smolFixture], [smil, smilFixture]] as [QuestionnaireDef, typeof smolFixture][]) {
-  describe(`${def.title}: совпадает со старым подсчётом`, () => {
+const decode = (s: string) => [...s].map((c) => (c === "." ? null : c)) as MaybeAnswer[];
+const defs = (await Promise.all(TESTS.map((t) => t.load()))).filter(isQuestionnaireModule).map((m) => m.def);
+
+test("у каждого опросника есть эталон", () => {
+  for (const def of defs) expect(fs.existsSync(`tests/fixtures/${def.id}.json`), def.id).toBe(true);
+});
+
+for (const def of defs) {
+  const file = `tests/fixtures/${def.id}.json`;
+  if (!fs.existsSync(file)) continue;
+  const fx = JSON.parse(fs.readFileSync(file, "utf8")) as Fixture;
+
+  describe(`${def.title}: совпадает с эталоном`, () => {
     test("ключи вопросов", () => {
       expect(questionKeys(def)).toEqual(fx.questionKeys);
     });

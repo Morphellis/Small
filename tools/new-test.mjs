@@ -50,7 +50,7 @@ if (updated === registry) {
 console.log(`Готово: src/tests/${id}/ (${Object.keys(files).join(", ")}), тест добавлен в src/app/registry.ts.`);
 console.log(custom
   ? "Дальше: нарисовать экран в index.ts, затем npm run dev."
-  : "Дальше: заполнить data.ts и definition.ts (места с TODO), затем npm test и npm run dev.");
+  : `Дальше: заполнить data.ts и definition.ts (места с TODO), снять эталон подсчёта (npm run fixture ${id}), затем npm test и npm run dev.`);
 
 function questionnaireFiles() {
   return {
@@ -135,32 +135,29 @@ export default questionnaireModule(${camel(id)});
 function customFiles() {
   return {
     "index.ts": `/*
- * «${title}»: тест со своим экраном и своим подсчётом. От оболочки берёт только шапку
- * (переключатель тестов и кнопку темы); всё остальное — здесь, в этой папке.
- * Логику подсчёта держите в отдельном файле без DOM (например, scoring.ts) и проверяйте тестами в tests/.
+ * «${title}»: тест со своим экраном и своим подсчётом. От оболочки берёт шапку (переключатель тестов,
+ * «Показать ключ», тему, «Сбросить») и Scope — всё, что подписано через scope, снимется при переходе на другой тест.
+ * Как устроен вид теста целиком, смотрите на примере src/kinds/luscher: модель без DOM (model.ts, проверяется
+ * тестами в tests/), части экрана в view/, связка «событие → модель → перерисовка» в view/mount.ts.
  */
-import { bindTestSwitch, testSwitchHtml } from "../../app/testSwitch";
-import { bindThemeButton } from "../../app/theme";
+import { bindHeader, buttonHtml, headerHtml, keyButton } from "../../app/header";
+import { byId } from "../../app/html";
+import { createScope } from "../../app/scope";
 import type { TestModule } from "../../app/types";
 import "./${id}.css";
 
 const mod: TestModule = {
+  kind: "${id}",
   mount(root, ctx) {
-    const abort = new AbortController();
-    root.innerHTML = \`
-      <header class="panel"><div class="wrap"><div class="panel-head">
-        \${testSwitchHtml(ctx)}
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-theme" data-theme-btn aria-label="Переключить тему"></button>
-      </div></div></header>
+    const scope = createScope();
+    root.innerHTML = headerHtml(ctx, { actions: [buttonHtml(keyButton())] }) + \`
       <main class="wrap ${id}-main">
         <p>TODO: экран теста «${title}».</p>
       </main>\`;
-    bindTestSwitch(root, ctx, abort.signal);
-    bindThemeButton(root.querySelector<HTMLElement>("[data-theme-btn]")!, abort.signal);
-    // Обработчики вешайте с { signal: abort.signal } — тогда они снимутся при переходе на другой тест.
+    bindHeader(root, ctx, scope);
+    scope.on(byId(root, "resetBtn"), "click", () => { /* TODO: начать заново */ });
     return () => {
-      abort.abort();
+      scope.dispose();
       root.innerHTML = "";
     };
   }

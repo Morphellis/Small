@@ -4,9 +4,16 @@
  */
 import type { TestModule } from "../../app/types";
 import type { LuscherDef } from "./types";
-import { mountLuscher } from "./view";
+import { mountLuscher } from "./view/mount";
 import "./luscher.css";
 
-export function luscherModule(def: LuscherDef): TestModule & { luscher: LuscherDef } {
-  return { luscher: def, mount: (root, ctx) => mountLuscher(def, root, ctx) };
+export interface LuscherModule extends TestModule {
+  kind: "luscher";
+  def: LuscherDef;
 }
+
+export function luscherModule(def: LuscherDef): LuscherModule {
+  return { kind: "luscher", def, mount: (root, ctx) => mountLuscher(def, root, ctx) };
+}
+
+export const isLuscherModule = (m: TestModule): m is LuscherModule => m.kind === "luscher";

@@ -2,16 +2,16 @@
  * Два вида подробного профиля: полосы («Шкалы», как в результатах psytests.org) и график Т-баллов.
  * Рисуют по готовому профилю и ничего не хранят.
  */
-import type { Profile, QuestionnaireDef } from "./types";
+import type { Profile, QuestionnaireDef } from "../types";
 
 export interface ProfileViewData {
   def: QuestionnaireDef;
   profile: Profile;
   /** Шкалы, изменённые последним ответом. */
-  changed: Set<string>;
+  changed: ReadonlySet<string>;
   /** Профиль до последнего ответа. */
   before: Profile | null;
-  focus: Set<string>;
+  focus: ReadonlySet<string>;
 }
 
 const scaleLabel = (def: QuestionnaireDef, s: string) => `${def.scaleInfo[s].code}: ${def.scaleInfo[s].name}`;
