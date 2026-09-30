@@ -11,6 +11,7 @@ import { currentStep } from "../flow";
 import { derive, emptySession, layoutFor, loadSaved, toSaved, type Saved } from "../model";
 import type { LuscherDef } from "../types";
 import { guideHtml } from "./guide";
+import { play, playUndo, snapshot } from "./motion";
 import { progressHtml, resultsHtml } from "./results";
 import { stageHtml } from "./stage";
 
@@ -68,19 +69,26 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     resultsEl.innerHTML = resultsHtml(def, d);
   }
 
+  const stepId = () => currentStep(V, session.log)?.id ?? null;
+
   function choose(value: number) {
     const step = currentStep(V, session.log);
     if (!step) return;
+    const before = snapshot(stageEl, resultsEl, step.id, step.kind === "pause" ? null : value);
     session.log.push({ step: step.id, value });
     saver.schedule();
     render();
+    play(before, stageEl, resultsEl, stepId(), root);
   }
 
   function undo() {
-    if (!session.log.length) return;
+    const popped = session.log.at(-1);
+    if (!popped) return;
+    const before = snapshot(stageEl, resultsEl, stepId(), null);
     session.log.pop();
     saver.schedule();
     render();
+    playUndo(before, stageEl, resultsEl, stepId(), popped.value);
   }
 
   scope.on(stageEl, "click", (e) => {

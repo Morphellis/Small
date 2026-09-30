@@ -7,6 +7,7 @@
  */
 import { byId } from "../../../app/html";
 import { setPressed, bindHeader } from "../../../app/header";
+import { reducedMotion, tween } from "../../../app/motion";
 import { createScope } from "../../../app/scope";
 import { createSaver, readJson } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
@@ -83,6 +84,32 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   const chartWidthFor = (w: number) => Math.round(Math.min(800, Math.max(300, w)));
   const viewData = (): ProfileViewData => ({ def, profile, changed: new Set(last ? last.changed : []), before: last ? last.before : null, focus: v.focus });
 
+  /*
+   * Точки графика не прыгают, а за 350 мс доезжают до нового профиля. chartT — что нарисовано сейчас
+   * (в том числе посреди анимации), чтобы новый ответ во время анимации продолжил движение с того же места.
+   */
+  let chartT: Record<string, number> | null = null;
+  let stopTween = () => {};
+  scope.add(() => stopTween());
+
+  function drawChart() {
+    stopTween();
+    const data = viewData();
+    const from = chartT;
+    const to = profile.t;
+    if (!from || drawn.chart === -1 || reducedMotion() || def.scaleOrder.every((s) => from[s] === to[s])) {
+      chartT = { ...to };
+      renderChart(el.chart, chartW, data);
+      return;
+    }
+    stopTween = tween(350, (k) => {
+      const t: Record<string, number> = {};
+      for (const s of def.scaleOrder) t[s] = from[s] + (to[s] - from[s]) * k;
+      chartT = t;
+      renderChart(el.chart, chartW, data, t);
+    });
+  }
+
   function renderProfile(force = false) {
     if (!prefs.showProfile && !WIDE.matches) return; // шторка закрыта — нарисуем при открытии
     const view = prefs.profileView;
@@ -90,8 +117,10 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
       const w = el.chartWrap.clientWidth;
       const width = w > 0 ? chartWidthFor(w) : 600;
       if (!force && drawn.chart === version && width === chartW) return;
+      const resized = width !== chartW;
       chartW = width;
-      renderChart(el.chart, width, viewData());
+      if (drawn.chart === version && resized) renderChart(el.chart, chartW, viewData(), chartT ?? profile.t);
+      else drawChart();
     } else if (!force && drawn[view] === version) {
       return;
     } else if (view === "bars") {
@@ -168,8 +197,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     const top = Math.max(8, el.panel.getBoundingClientRect().bottom + 8);
     if (r.top < top || r.bottom > window.innerHeight - 8 || flash) {
       const target = top + Math.max(0, (window.innerHeight - top - r.height) / 3);
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollBy({ top: r.top - target, behavior: reduce ? "auto" : "smooth" });
+      window.scrollBy({ top: r.top - target, behavior: reducedMotion() ? "auto" : "smooth" });
     }
     if (flash) {
       li.classList.remove("flash");
