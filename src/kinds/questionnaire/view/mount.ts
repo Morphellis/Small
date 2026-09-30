@@ -142,6 +142,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   function renderLayout() {
     el.layout.classList.toggle("no-side", !prefs.showProfile);
     el.sideOpen.hidden = prefs.showProfile;
+    // Строка шкал в шапке дублирует профиль — нужна, только когда его колонки не видно (закрыта или на узком экране шторка).
+    el.strip.hidden = WIDE.matches && prefs.showProfile;
     setPressed(el.toggleProfile, prefs.showProfile);
     el.toggleProfile.setAttribute("aria-expanded", String(prefs.showProfile));
     const view = prefs.profileView;

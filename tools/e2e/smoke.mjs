@@ -122,6 +122,18 @@ async function questionnaire(id, total, { dk = true } = {}) {
   check(await b.js(`return document.getElementById("impact").classList.contains("hit") || document.getElementById("impact").classList.contains("miss");`), `${id}: строка «что изменил ответ» заполнена`);
   await layoutChecks(`${id} после ответов`);
 
+  const wide = await b.js(`return matchMedia("(min-width: 1001px)").matches;`);
+  const stripShown = () => b.js(`return document.getElementById("strip").offsetParent !== null;`);
+  if (wide) {
+    // Строка шкал дублирует профиль справа — видна, только когда профиль закрыт.
+    check(!(await stripShown()), `${id}: строка шкал скрыта, пока профиль открыт справа`);
+    await b.js(`window.scrollTo(0, 0);`);
+    await click("#toggleProfile", `${id}: закрыть профиль справа`);
+    check(await stripShown(), `${id}: без профиля строка шкал видна`);
+  } else {
+    check(await stripShown(), `${id}: на узком экране строка шкал видна`);
+  }
+
   if ((await count("#strip [data-more]")) > 0) {
     const before = await count("#strip .sc");
     await click("#strip [data-more]", `${id}: «ещё N шкал»`);
@@ -130,7 +142,10 @@ async function questionnaire(id, total, { dk = true } = {}) {
     await click("#strip [data-more]", `${id}: свернуть полоску`);
   }
 
-  const wide = await b.js(`return matchMedia("(min-width: 1001px)").matches;`);
+  if (wide) {
+    await b.js(`window.scrollTo(0, 0);`);
+    await click("#toggleProfile", `${id}: открыть профиль справа`);
+  }
   if (!wide) {
     await b.js(`window.scrollTo(0, 400);`);
     const bottomBtn = await b.js(`return document.getElementById("sideOpen").offsetParent !== null;`);
