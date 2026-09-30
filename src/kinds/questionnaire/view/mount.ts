@@ -44,6 +44,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     viewButtons: [...root.querySelectorAll<HTMLButtonElement>(".view-switch button")],
     keyBtn: byId(root, "keyBtn"),
     toggleProfile: byId(root, "toggleProfile"),
+    side: byId(root, "side"),
     sideOpen: byId(root, "sideOpen"),
     toast: byId(root, "toast"),
     questions: byId(root, "questions"),
@@ -161,6 +162,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     for (const k of el.questions.querySelectorAll<HTMLElement>(".q-key")) k.hidden = !prefs.keyMode;
     updatePanelHeight();
     renderProfile();
+    updateSheetHeight();
   }
 
   function renderAll() {
@@ -197,8 +199,10 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     updatePanelHeight();
     const r = li.getBoundingClientRect();
     const top = Math.max(8, el.panel.getBoundingClientRect().bottom + 8);
-    if (r.top < top || r.bottom > window.innerHeight - 8 || flash) {
-      const target = top + Math.max(0, (window.innerHeight - top - r.height) / 3);
+    // Видимая часть — между шапкой и открытой шторкой профиля (на узком экране), а не до низа окна.
+    const bottom = window.innerHeight - sheetHeight();
+    if (r.top < top || r.bottom > bottom - 8 || flash) {
+      const target = top + Math.max(0, (bottom - top - r.height) / 3);
       window.scrollBy({ top: r.top - target, behavior: reducedMotion() ? "auto" : "smooth" });
     }
     if (flash) {
@@ -206,6 +210,13 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
       void li.offsetWidth; // перезапустить анимацию
       li.classList.add("flash");
     }
+  }
+
+  /** Высота открытой шторки профиля на узком экране (0, если она закрыта или профиль — колонка справа). */
+  const sheetHeight = () => (NARROW.matches && prefs.showProfile ? el.side.getBoundingClientRect().height : 0);
+
+  function updateSheetHeight() {
+    document.documentElement.style.setProperty("--sheet-h", sheetHeight() + "px");
   }
 
   function updatePanelHeight() {
@@ -308,6 +319,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   });
 
   scope.observeResize(el.panel, updatePanelHeight);
+  scope.observeResize(el.side, updateSheetHeight);
+  scope.add(() => document.documentElement.style.removeProperty("--sheet-h"));
   scope.observeResize(el.chartWrap, () => { if (prefs.profileView === "chart") renderProfile(); });
   scope.on(window, "resize", updatePanelHeight);
 

@@ -451,9 +451,11 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .layout.no-side .side { display: block; }
   .side {
     position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 30;
-    height: clamp(260px, calc(100vh - var(--panel-h)), 86vh);
-    height: clamp(260px, calc(100dvh - var(--panel-h)), 86dvh);
-    max-height: none; margin: 0; padding: 0 14px 20px;
+    /* по содержимому, но не выше места под шапкой: над короткой шторкой (полосы, график) видны вопросы */
+    height: auto;
+    max-height: clamp(260px, calc(100vh - var(--panel-h)), 86vh);
+    max-height: clamp(260px, calc(100dvh - var(--panel-h)), 86dvh);
+    margin: 0; padding: 0 14px calc(14px + env(safe-area-inset-bottom));
     border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
     box-shadow: var(--shadow-sheet);
     overscroll-behavior: contain;
@@ -468,6 +470,8 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3); font-size: 14px; font-weight: 600; cursor: pointer;
   }
   .main { padding-bottom: 48px; }
+  /* открытая шторка не должна закрывать последние вопросы — под ними место на её высоту */
+  .layout:not(.no-side) .main { padding-bottom: calc(var(--sheet-h, 0px) + 16px); }
   .side-top { position: sticky; top: 0; z-index: 2; margin: 0 -14px 10px; padding: 0 14px 8px; background: var(--surface); }
   .side-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 8px; }
   .side-head b { font-size: 16px; }
@@ -496,6 +500,17 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .strip::-webkit-scrollbar { display: none; }
   .strip .sc { flex: 0 0 46px; min-width: 46px; padding: 3px 0 2px; }
   .bar-row { grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 34px; gap: 6px; }
+  /* шторка профиля пониже, чтобы над ней оставались видны вопросы: переключатель и ✕ в одну строку, полосы плотнее */
+  .side-top { display: flex; align-items: center; gap: 8px; padding-top: 10px; }
+  .side-top .view-switch { flex: 1; }
+  .side-head { order: 2; padding: 0; }
+  .side-head b { display: none; }
+  .bars-h { margin: 0 0 2px; font-size: 12.5px; }
+  .bar-row { margin-bottom: 2px; }
+  .bar-row + .bars-h { margin-top: 6px; }
+  .bar-track { height: 13px; }
+  .bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .bar-val { font-size: 13.5px; }
   .scores td.name { white-space: normal; line-height: 1.25; }
   .bars { font-size: 12px; }
   .q { grid-template-columns: 26px minmax(0, 1fr); padding: 9px 8px; }
