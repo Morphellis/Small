@@ -6,7 +6,7 @@ import { swatches as sws } from "./common";
 
 export function guideHtml(def: LuscherDef): string {
   return `
-    <summary><b>Как поднять тревожность</b> <span>— логика, а не заучивание</span></summary>
+    <summary><b>Как поднять тревожность</b></summary>
     <div class="lu-guide-body">
       <p>Показатель тревожности (0–12) — это восклицательные знаки за цвета «не на своём месте» в ряду из восьми:</p>
       <ul>
