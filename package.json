@@ -2,6 +2,8 @@
   "name": "mmpi-trainer",
   "version": "2.0.0",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "Одиночная палата",
   "type": "module",
   "description": "Тренажёр психологических тестов (СМОЛ, СМИЛ и другие): статический сайт на Vite + TypeScript",
   "scripts": {

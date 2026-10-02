@@ -3,11 +3,15 @@ import { defineConfig } from "vitest/config";
 // base "./": сайт работает и в корне домена, и в подпапке (morphellis.github.io/Small/).
 export default defineConfig({
   base: "./",
+  // Не выбрасывать при сжатии комментарии «/*! … */» — так в собранных файлах остаётся знак авторского права.
+  esbuild: { legalComments: "inline" },
   build: {
     outDir: "dist",
     target: "es2022",
     rollupOptions: {
       output: {
+        // Знак авторского права в начале каждого собранного файла («/*!» переживает сжатие).
+        banner: "/*! © 2026 «Одиночная палата». All rights reserved. Copying is prohibited — see LICENSE. */",
         // Понятные имена файлов: тест — assets/smil-….js, вид теста — assets/kind-questionnaire-….js,
         // общий код оболочки — assets/shared-….js (а не безликие index-….js).
         chunkFileNames: (chunk) => {
