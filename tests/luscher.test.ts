@@ -1,10 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
-  achromaticOrder, currentStep, hintFor, pairWins, psytestsUrl, rankOrder, shuffledColors, steps, type Pick, type Variant
+  MAX_ANXIETY_ORDER, achromaticOrder, currentStep, hintFor, pairWins, psytestsUrl, rankOrder, shuffledColors, steps, type Pick, type Variant
 } from "../src/kinds/luscher/flow";
-import {
-  MAX_ANXIETY_ORDER, anxiety, anxietyMarks, deviation, vegetativeText
-} from "../src/kinds/luscher/scoring";
+import { anxiety, anxietyMarks, deviation, vegetativeText } from "../server/luscher/scoring";
 
 /** Пройти тест, отвечая функцией answer(шаг, сколько уже выбрано на шаге). */
 function run(variant: Variant, answer: (step: NonNullable<ReturnType<typeof currentStep>>, k: number) => number): Pick[] {

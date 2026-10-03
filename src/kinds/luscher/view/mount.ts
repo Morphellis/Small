@@ -1,7 +1,9 @@
 /*
  * Экран теста Люшера целиком: шапка, блок логики, текущий шаг и результат. Работает с любым LuscherDef.
  * Модель — ../model.ts, части экрана — соседние файлы; здесь связка «событие → модель → перерисовка».
+ * Шаги ведёт браузер, показатели считает сервер: результат обновляется, когда придёт расчёт (createSync).
  */
+import { api, createSync } from "../../../app/api";
 import { bindHeader, buttonHtml, headerHtml, keyButton, setPressed } from "../../../app/header";
 import { byId } from "../../../app/html";
 import { createScope } from "../../../app/scope";
@@ -9,9 +11,9 @@ import { createSaver, readJson, readString, writeString } from "../../../app/sto
 import type { AppContext, Unmount } from "../../../app/types";
 import { currentStep } from "../flow";
 import { derive, emptySession, layoutFor, loadSaved, toSaved, type Saved } from "../model";
-import type { LuscherDef } from "../types";
+import type { LuscherDef, LuscherResult } from "../types";
 import { guideHtml } from "./guide";
-import { play, playUndo, snapshot } from "./motion";
+import { gaugeLeft, moveGauge, play, playUndo, snapshot } from "./motion";
 import { progressHtml, resultsHtml } from "./results";
 import { stageHtml } from "./stage";
 
@@ -57,6 +59,30 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   guide.open = readString(GUIDE_KEY) === "open";
   scope.on(guide, "toggle", () => writeString(GUIDE_KEY, guide.open ? "open" : "closed"));
 
+  /** Последний расчёт сервера; null — ещё не пришёл. */
+  let result: LuscherResult | null = null;
+
+  const scoring = createSync(scope, {
+    send: (signal) => api<LuscherResult>(`api/luscher/${V}/score`, { body: { log: session.log }, signal }),
+    onResult(r) {
+      result = r;
+      renderResults();
+    },
+    onBusy: (busy) => resultsEl.setAttribute("aria-busy", String(busy)),
+    onError() {
+      resultsEl.querySelector(".lu-offline")?.remove();
+      resultsEl.insertAdjacentHTML("afterbegin", `<p class="lu-offline">Нет связи с сервером — результат пересчитается, как только она появится. Выборы сохранены.</p>`);
+    }
+  });
+
+  function renderResults() {
+    const d = derive(V, session.log);
+    const old = gaugeLeft(resultsEl);
+    progressEl.innerHTML = progressHtml(def, d, result);
+    resultsEl.innerHTML = resultsHtml(def, d, result);
+    moveGauge(old, resultsEl);
+  }
+
   function render() {
     const d = derive(V, session.log);
     const hadLayout = d.step ? d.step.id in session.layouts : true;
@@ -64,9 +90,8 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     if (!hadLayout && layout) saver.schedule(); // новая случайная раскладка — запомнить
     setPressed(keyBtn, session.keyMode, { on: "Скрыть ключ", off: "Показать ключ" });
     undoBtn.disabled = session.log.length === 0;
-    progressEl.innerHTML = progressHtml(def, d);
     stageEl.innerHTML = stageHtml(def, d, session.keyMode, layout);
-    resultsEl.innerHTML = resultsHtml(def, d);
+    renderResults();
   }
 
   const stepId = () => currentStep(V, session.log)?.id ?? null;
@@ -74,21 +99,23 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   function choose(value: number) {
     const step = currentStep(V, session.log);
     if (!step) return;
-    const before = snapshot(stageEl, resultsEl, step.id, step.kind === "pause" ? null : value);
+    const before = snapshot(stageEl, step.id, step.kind === "pause" ? null : value);
     session.log.push({ step: step.id, value });
     saver.schedule();
     render();
-    play(before, stageEl, resultsEl, stepId(), root);
+    scoring.request();
+    play(before, stageEl, stepId(), root);
   }
 
   function undo() {
     const popped = session.log.at(-1);
     if (!popped) return;
-    const before = snapshot(stageEl, resultsEl, stepId(), null);
+    const before = snapshot(stageEl, stepId(), null);
     session.log.pop();
     saver.schedule();
     render();
-    playUndo(before, stageEl, resultsEl, stepId(), popped.value);
+    scoring.request();
+    playUndo(before, stageEl, stepId(), popped.value);
   }
 
   scope.on(stageEl, "click", (e) => {
@@ -104,8 +131,10 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   scope.on(byId(root, "resetBtn"), "click", () => {
     if (session.log.length && !window.confirm("Начать тест заново? Все выборы будут удалены.")) return;
     session = emptySession(session.keyMode);
+    result = null; // старый результат к новому прохождению не относится
     saver.schedule();
     render();
+    scoring.request();
   });
 
   scope.on(document, "keydown", (e) => {
@@ -134,6 +163,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   });
 
   render();
+  scoring.request();
 
   return () => {
     scope.dispose();

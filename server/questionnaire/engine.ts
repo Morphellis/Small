@@ -1,13 +1,10 @@
 /*
  * Общий подсчёт опросника: ответы → сырые баллы по ключу → поправка K → Т-баллы → уровни → достоверность.
- * Без обращения к DOM, поэтому проверяется тестами в Node. Всё, чем тесты отличаются, берётся из QuestionnaireDef.
+ * Только на сервере. Всё, чем тесты отличаются, берётся из QuestionnaireDef.
  */
-import type { Answer, Level, MaybeAnswer, Profile, QuestionnaireDef } from "./types";
-
-export interface QuestionKey {
-  scale: string;
-  answer: Answer;
-}
+import { normalizeAnswers } from "../../src/kinds/questionnaire/answers";
+import type { KeysResponse, Level, Profile, QuestionKey } from "../../src/kinds/questionnaire/types";
+import type { QuestionnaireDef } from "./types";
 
 const keysCache = new WeakMap<QuestionnaireDef, QuestionKey[][]>();
 
@@ -26,14 +23,20 @@ export function questionKeys(def: QuestionnaireDef): QuestionKey[][] {
   return keys;
 }
 
-const isAnswer = (v: unknown): v is Answer => v === "Y" || v === "N" || v === "?";
+const publicCache = new WeakMap<QuestionnaireDef, KeysResponse>();
 
-/** Ответы ровно по числу вопросов; всё непонятное (из старого сохранения) — «нет ответа». */
-export function normalizeAnswers(def: QuestionnaireDef, answers: readonly unknown[] | null | undefined): MaybeAnswer[] {
-  return def.questions.map((_, i) => {
-    const a = answers ? answers[i] : null;
-    return isAnswer(a) ? a : null;
-  });
+/**
+ * Что из ключа отдаётся браузеру: по каждому вопросу только отслеживаемые шкалы (ui.focus) — их показывают
+ * строка ключа и «что дал ответ», — и свой список «правильных» ответов. Ключи остальных шкал, нормы
+ * и формулы остаются на сервере.
+ */
+export function publicKeys(def: QuestionnaireDef): KeysResponse {
+  let r = publicCache.get(def);
+  if (r) return r;
+  const focus = new Set(def.ui.focus);
+  r = { keys: questionKeys(def).map((list) => list.filter((k) => focus.has(k.scale))), hints: def.hints };
+  publicCache.set(def, r);
+  return r;
 }
 
 export function levelOf(def: QuestionnaireDef, t: number): Level {
@@ -73,28 +76,6 @@ export function computeProfile(def: QuestionnaireDef, answers: readonly unknown[
     raw, kAdd, corrected, t, extrapolated, level, dontKnow, answered,
     controlCorrect, controlTotal: control.length, validity: def.validity({ raw, t })
   };
-}
-
-/** Какие шкалы изменились между двумя расчётами (сырой, с поправкой или Т-балл). */
-export function changedScales(def: QuestionnaireDef, before: Profile, after: Profile): string[] {
-  return def.scaleOrder.filter((s) => {
-    const tChanged = Math.abs(before.t[s] - after.t[s]) > 1e-9;
-    return before.raw[s] !== after.raw[s] || before.corrected[s] !== after.corrected[s] || tChanged;
-  });
-}
-
-export type CellState = "empty" | "first" | "changed" | "dk" | "dkAfter";
-
-/*
- * Состояние клетки регистрационного листа по истории кликов (history — значения после каждого клика).
- * empty — нет ответа; first — Да/Нет с первого раза; changed — ответ менялся;
- * dk — «Не знаю»; dkAfter — сначала Да/Нет, затем «Не знаю».
- */
-export function cellState(history: readonly MaybeAnswer[] | undefined, current: MaybeAnswer | undefined): CellState {
-  const given = (history || []).filter((v) => v !== null);
-  if (current === null || current === undefined) return "empty";
-  if (current === "?") return given.some((v) => v === "Y" || v === "N") ? "dkAfter" : "dk";
-  return given.some((v) => v !== current) ? "changed" : "first";
 }
 
 // ---------- кирпичики для описаний тестов ----------

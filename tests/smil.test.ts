@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
+import { computeProfile, questionKeys } from "../server/questionnaire/engine";
 import type { MaybeAnswer } from "../src/kinds/questionnaire/types";
-import { SMIL_DATA as D } from "../src/tests/smil/data";
-import { smil } from "../src/tests/smil/definition";
+import { SMIL_DATA as D } from "../server/tests/smil/data";
+import { smil } from "../server/tests/smil/definition";
 
 const ORDER = ["L", "F", "K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const N = 566;
@@ -76,12 +76,12 @@ test("достоверность: L или K выше 70 Т, F выше 80 Т", 
 });
 
 test("данные: 566 утверждений, 27 контрольных, пункт 26 не входит в шкалу 5", () => {
-  assert.equal(D.questions.length, N);
+  assert.equal(smil.questions.length, N);
   assert.equal(D.controlItems.length, 27);
-  for (const q of D.controlItems) assert.match(D.questions[q - 1], /обвести кружочком/);
+  for (const q of D.controlItems) assert.match(smil.questions[q - 1], /обвести кружочком/);
   assert.ok(!D.scales["5"].yes.includes(26) && !D.scales["5"].no.includes(26));
-  assert.match(D.questions[1], /аппетит/);
-  assert.match(D.questions[565], /любовные эпизоды/);
+  assert.match(smil.questions[1], /аппетит/);
+  assert.match(smil.questions[565], /любовные эпизоды/);
 });
 
 test("ключ вопроса 20: F «Нет», 4 «Нет», 8 «Нет»", () => {

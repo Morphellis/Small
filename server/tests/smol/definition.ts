@@ -5,8 +5,9 @@
  * Т по мужскому профильному листу Козюли. Варианты (ключ из ТЗ, Т по формуле, поправка round(k·K))
  * оставлены для сверки и проверяются тестами: createSmol({ key: "classic", tMethod: "formula" }).
  */
-import { tFormula, validityByLimits } from "../../kinds/questionnaire/engine";
-import type { QuestionnaireDef, TScore } from "../../kinds/questionnaire/types";
+import { smol as SPEC } from "../../../src/tests/smol/spec";
+import { tFormula, validityByLimits } from "../../questionnaire/engine";
+import type { QuestionnaireDef, TScore } from "../../questionnaire/types";
 import { SMOL_DATA as D } from "./data";
 import { SMOL_HINTS } from "./hints";
 
@@ -72,28 +73,13 @@ function tBySheet(scale: string, x: number): TScore {
 export function createSmol(opts: SmolOptions = {}): QuestionnaireDef {
   const tMethod = opts.tMethod ?? "sheet";
   return {
-    id: "smol",
-    title: "СМОЛ",
-    storageKey: "smol-trainer-v1",
-    questions: D.questions,
-    scaleOrder: D.scaleOrder,
-    scaleInfo: D.scaleInfo,
+    ...SPEC,
     key: (opts.key ?? "psytests") === "classic" ? D.scalesClassic : D.scales,
-    kCorrected: Object.keys(K_FACTORS),
     kCorrection: (k) => smolKCorrection(k, opts),
     tScore: tMethod === "formula" ? tByFormula : tBySheet,
     tDigits: tMethod === "sheet" ? 0 : 2,
-    // Как на psytests.org: [10–39] низкие, [40–69] средние, [70–110] высокие.
-    thresholds: { high: 70, low: 39 },
     validity: validityByLimits(VALIDITY_LIMITS, VALIDITY_REASONS, "raw"),
-    validityRule: "По правилам СМОЛ результат недостоверен, если сырой балл L больше 4 или F больше 6.",
-    ui: {
-      focus: ["L", "F", "K", "1", "2", "7", "8"],
-      hints: SMOL_HINTS,
-      keyHighlight: true,
-      bars: { min: 10, max: 110 },
-      band: [40, 70]
-    }
+    hints: SMOL_HINTS
   };
 }
 

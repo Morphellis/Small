@@ -1,12 +1,12 @@
 /*
  * Движок против эталонов подсчёта (tests/fixtures/<id>.json, сняты до рефакторингов — tools/make-fixture.ts).
- * Любое расхождение значит, что баллы на сайте поменялись. Эталон есть у каждого опросника из реестра.
+ * Любое расхождение значит, что баллы на сайте поменялись. Эталон есть у каждого опросника сервера (server/registry.ts).
  */
 import fs from "node:fs";
 import { describe, expect, test } from "vitest";
-import { TESTS } from "../../src/app/registry";
-import { isQuestionnaireModule } from "../../src/kinds/questionnaire";
-import { changedScales, computeProfile, questionKeys } from "../../src/kinds/questionnaire/engine";
+import { changedScales } from "../../src/kinds/questionnaire/answers";
+import { computeProfile, questionKeys } from "../../server/questionnaire/engine";
+import { QUESTIONNAIRES } from "../../server/registry";
 import type { MaybeAnswer } from "../../src/kinds/questionnaire/types";
 
 interface Fixture {
@@ -17,7 +17,7 @@ interface Fixture {
 }
 
 const decode = (s: string) => [...s].map((c) => (c === "." ? null : c)) as MaybeAnswer[];
-const defs = (await Promise.all(TESTS.map((t) => t.load()))).filter(isQuestionnaireModule).map((m) => m.def);
+const defs = Object.values(QUESTIONNAIRES);
 
 test("у каждого опросника есть эталон", () => {
   for (const def of defs) expect(fs.existsSync(`tests/fixtures/${def.id}.json`), def.id).toBe(true);

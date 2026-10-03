@@ -1,4 +1,4 @@
 import { questionnaireModule } from "../../kinds/questionnaire";
-import { mmil } from "./definition";
+import { mmil } from "./spec";
 
 export default questionnaireModule(mmil);

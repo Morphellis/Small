@@ -1,6 +1,7 @@
 /*
  * Критические сценарии в настоящем браузере на разных экранах — настоящими кликами и клавишами:
  * пройти каждый тест, ключ, профиль, лист, сброс, тема, сохранение; ничего не перекрыто и не вылезает за экран.
+ * Сайт работает с настоящим собранным сервером: баллы приходят по сети, обрыв связи тоже проверяется.
  *
  *   npm run e2e                         собрать сайт и проверить на всех экранах
  *   E2E_ONLY=320,1440 npm run e2e       только экраны, чьё название начинается с «320» или «1440»
@@ -41,6 +42,34 @@ async function open(hash, theme = "dark") {
   await b.goto(site.url + "#" + hash, ".panel-head");
   await b.js(`localStorage.clear(); localStorage.setItem("trainer-theme", "${theme}");`);
   await b.goto(site.url + "?r=" + Math.random() + "#" + hash, "#keyBtn");
+  await idle(`${hash}: первый расчёт`);
+}
+
+/** Дождаться, пока сервер ответит на все запросы (aria-busy) и придёт ключ. */
+async function idle(where) {
+  for (let i = 0; i < 100; i++) {
+    const ok = await b.js(`return !document.querySelector('[aria-busy="true"]') && !/загружается…/.test(document.getElementById("questions")?.textContent ?? "") && !document.querySelector(".lu-results .lu-empty")?.textContent.includes("Считаю");`);
+    if (ok) return true;
+    await sleep(50);
+  }
+  return check(false, `${where}: сервер не ответил за 5 с`);
+}
+const noOffline = (where) => b.js(`return !/Нет связи/.test(document.body.innerText);`).then((ok) => check(ok, `${where}: нет сообщений «Нет связи»`));
+
+/** Обрыв связи: ответ отмечается, появляется «Нет связи», а когда связь вернулась — баллы досчитываются сами. */
+async function offline() {
+  await open("smol");
+  await b.send("Network.enable");
+  await b.send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await click('#q-1 button[data-a="N"]', "без связи: ответ на вопрос 1");
+  await sleep(400);
+  check(await b.js(`return document.querySelector("#q-1 button.on")?.dataset.a === "N";`), "без связи: ответ всё равно отмечается");
+  check(await b.js(`return /Нет связи/.test(document.getElementById("impact").textContent);`), "без связи: сообщение «Нет связи с сервером»");
+  await b.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await sleep(1200);
+  await idle("связь вернулась");
+  check(await b.js(`return document.getElementById("impact").classList.contains("hit") && /Вопрос 1/.test(document.getElementById("impact").textContent);`), "связь вернулась: баллы досчитаны сами");
+  await b.send("Network.disable");
 }
 const count = (sel) => b.js(`return document.querySelectorAll(${JSON.stringify(sel)}).length;`);
 
@@ -119,6 +148,8 @@ async function questionnaire(id, total, { dk = true } = {}) {
     }
   }
   check((await count("#sheetGrid .cell:not(.st-empty)")) === total, `${id}: засчитано ${total} ответов`);
+  await idle(`${id}: расчёт после ответов`);
+  await noOffline(id);
   check(await b.js(`return document.getElementById("impact").classList.contains("hit") || document.getElementById("impact").classList.contains("miss");`), `${id}: строка «что изменил ответ» заполнена`);
   await layoutChecks(`${id} после ответов`);
 
@@ -193,7 +224,9 @@ async function questionnaire(id, total, { dk = true } = {}) {
 
   const saved = await count("#sheetGrid .cell:not(.st-empty)");
   await b.goto(site.url + "?r=" + Math.random() + "#" + id, "#sheetGrid .cell");
+  await idle(`${id}: после перезагрузки`);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === saved, `${id}: ответы сохраняются после перезагрузки`);
+  check(await b.js(`return document.querySelectorAll("#strip .sc, #scoreBody tr").length >= 5 && !/Загружаю/.test(document.getElementById("impact").textContent);`), `${id}: после перезагрузки профиль пришёл с сервера`);
   await click("#resetBtn", `${id}: «Сбросить»`);
   await sleep(200);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === 0, `${id}: «Сбросить» очищает ответы`);
@@ -226,6 +259,8 @@ async function luscher(id) {
     if (!(await click(kind, `${id}: выбор ${n + 1}`))) break;
     if (n % 9 === 0) await layoutChecks(`${id} шаг ${n + 1}`);
   }
+  await idle(`${id}: расчёт результата`);
+  await noOffline(id);
   const res = await b.js(`return { done: !!document.querySelector(".lu-done"), a: document.querySelector(".lu-score-head b")?.textContent };`);
   check(res.done, `${id}: тест проходится до конца (${n} выборов)`);
   check(res.a === "12", `${id}: по ключу тревожность 12 (${res.a})`);
@@ -238,7 +273,7 @@ async function luscher(id) {
   await click("#undoBtn", `${id}: «← Назад»`);
   check(await b.js(`return !document.querySelector(".lu-done") && !!document.querySelector(".lu-stage [data-v], .lu-stage [data-go]");`), `${id}: «Назад» отменяет последний выбор`);
   await click("#resetBtn", `${id}: «Сбросить»`);
-  await sleep(200);
+  await idle(`${id}: расчёт после сброса`);
   check(await b.js(`return !document.querySelector(".lu-score-head") && /Шаг 1 из/.test(document.querySelector(".lu-stage").innerText);`), `${id}: «Сбросить» начинает заново`);
 }
 
@@ -249,6 +284,7 @@ for (const [name, w, h, mobile] of VIEWPORTS) {
   try {
     await switching();
     if (name === VIEWPORTS[0][0]) await noLeaks();
+    if (name === VIEWPORTS[0][0]) await offline();
     await questionnaire("smol", 71);
     await questionnaire("smil", 40);
     await questionnaire("mmil", 40, { dk: false });

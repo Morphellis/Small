@@ -2,10 +2,10 @@
  * Два вида подробного профиля: полосы («Шкалы», как в результатах psytests.org) и график Т-баллов.
  * Рисуют по готовому профилю и ничего не хранят.
  */
-import type { Profile, QuestionnaireDef } from "../types";
+import type { Profile, QuestionnaireSpec } from "../types";
 
 export interface ProfileViewData {
-  def: QuestionnaireDef;
+  def: QuestionnaireSpec;
   profile: Profile;
   /** Шкалы, изменённые последним ответом. */
   changed: ReadonlySet<string>;
@@ -14,7 +14,7 @@ export interface ProfileViewData {
   focus: ReadonlySet<string>;
 }
 
-const scaleLabel = (def: QuestionnaireDef, s: string) => `${def.scaleInfo[s].code}: ${def.scaleInfo[s].name}`;
+const scaleLabel = (def: QuestionnaireSpec, s: string) => `${def.scaleInfo[s].code}: ${def.scaleInfo[s].name}`;
 const signed = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(0);
 
 /**
@@ -41,7 +41,7 @@ export function renderBars(box: HTMLElement, { def, profile, changed, before, fo
   }
 }
 
-function buildBars(box: HTMLElement, def: QuestionnaireDef): void {
+function buildBars(box: HTMLElement, def: QuestionnaireSpec): void {
   const T_MIN = def.ui.bars.min, T_MAX = def.ui.bars.max;
   const pct = (t: number) => (((t - T_MIN) / (T_MAX - T_MIN)) * 100).toFixed(2) + "%";
   const { low, high } = def.thresholds;

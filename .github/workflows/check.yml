@@ -1,9 +1,9 @@
-# Проверка веток и pull request'ов: типы, тесты, сборка и сценарии в браузере. Ничего не выкладывает.
+# Проверка каждого пуша и pull request'а: типы, тесты, сборка (с проверкой утечек серверных данных),
+# сценарии в браузере против настоящего сервера и Docker-образ. Ничего не выкладывает.
 name: Check
 
 on:
   push:
-    branches-ignore: [main]
   pull_request:
 
 jobs:
@@ -22,3 +22,20 @@ jobs:
       - run: npm run e2e
         env:
           E2E_ONLY: "320,390,1440"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t trainer-app .
+      - name: Образ запускается, отдаёт сайт и считает
+        run: |
+          docker run -d --name app -p 8080:8080 trainer-app
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 1; done
+          curl -fs http://127.0.0.1:8080/ | grep -q 'id="app"'
+          answers=$(printf 'N%.0s' $(seq 1 71))
+          curl -fs -X POST -H 'Content-Type: application/json' -d "{\"answers\":\"$answers\"}" \
+            http://127.0.0.1:8080/api/questionnaire/smol/score | grep -q '"profile"'
+          test "$(docker inspect -f '{{.Config.User}}' app)" = node
+          ! docker exec app ls /app/server 2>/dev/null
+          docker logs app

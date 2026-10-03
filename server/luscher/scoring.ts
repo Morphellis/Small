@@ -1,18 +1,13 @@
 /*
- * Подсчёт цветового теста Люшера по восьмицветовому ряду — как на psytests.org.
+ * Подсчёт цветового теста Люшера по восьмицветовому ряду — как на psytests.org. Только на сервере.
  * Раскладка — строка из восьми цифр-цветов в порядке предпочтения, например "70615243".
  *
  * Цвета: 0 серый, 1 синий, 2 зелёный, 3 красный, 4 жёлтый (основные — 1–4), 5 фиолетовый, 6 коричневый, 7 чёрный.
  */
+import type { Band } from "../../src/kinds/luscher/bands";
 
 /** Аутогенная норма (Вальнёфер): порядок, в котором цвета стоят у человека без напряжения. */
 export const AUTOGENIC_NORM = "34251607";
-
-/**
- * Раскладка с наибольшей тревожностью. Проверено на psytests: тревожность 12 из 12 в обоих выборах,
- * совокупное отклонение 32 (наибольшее возможное: это аутогенная норма задом наперёд).
- */
-export const MAX_ANXIETY_ORDER = "70615243";
 
 const BASIC = "1234";
 const ANTI = "067";
@@ -34,25 +29,6 @@ export function anxietyMarks(order: string): number[] {
 /** Показатель тревожности: сумма знаков, 0–12. */
 export function anxiety(order: string): number {
   return anxietyMarks(order).reduce((a, b) => a + b, 0);
-}
-
-export interface Band {
-  from: number;
-  to: number;
-  label: string;
-  tone: "ok" | "mid" | "high" | "max";
-}
-
-/** Уровни тревожности. Границы — как на шкале psytests (0–2, 3–6, 7–10, 11–12). */
-export const ANXIETY_BANDS: Band[] = [
-  { from: 0, to: 2, label: "тревога не выражена", tone: "ok" },
-  { from: 3, to: 6, label: "эмоциональная напряжённость", tone: "mid" },
-  { from: 7, to: 10, label: "выраженная тревога", tone: "high" },
-  { from: 11, to: 12, label: "психологический и физиологический стресс", tone: "max" }
-];
-
-export function bandOf(bands: Band[], x: number): Band {
-  return bands.find((b) => x >= b.from && x <= b.to) ?? bands[bands.length - 1];
 }
 
 const posOf = (order: string, c: string) => order.indexOf(c) + 1;

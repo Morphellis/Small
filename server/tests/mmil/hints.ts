@@ -11,7 +11,7 @@
  * Шкала 7 от этого растёт: к ней прибавляется вся K.
  * На подсчёт баллов не влияет. Формат: номер утверждения: "Y" (Да) или "N" (Нет).
  */
-import type { Hints } from "../../kinds/questionnaire/types";
+import type { Hints } from "../../../src/kinds/questionnaire/types";
 
 /** Утверждения, где выбран ответ в пользу K. */
 export const K_ON = [13, 43, 73, 103, 124, 223, 277, 282, 312, 342, 372];

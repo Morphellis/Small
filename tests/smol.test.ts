@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { cellState, changedScales, computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
+import { cellState, changedScales } from "../src/kinds/questionnaire/answers";
+import { computeProfile, questionKeys } from "../server/questionnaire/engine";
 import type { MaybeAnswer } from "../src/kinds/questionnaire/types";
-import { SMOL_DATA as D } from "../src/tests/smol/data";
-import { createSmol, smol, smolKCorrection } from "../src/tests/smol/definition";
+import { SMOL_DATA as D } from "../server/tests/smol/data";
+import { createSmol, smol, smolKCorrection } from "../server/tests/smol/definition";
 
 const classicFormula = createSmol({ key: "classic", tMethod: "formula" });
 
@@ -157,7 +158,7 @@ test("ключ psytests воспроизводит все 14 прогонов и
 });
 
 test("данные: 71 вопрос, вопрос 26 про мышцы, 27 про чувство вины", () => {
-  assert.equal(D.questions.length, 71);
-  assert.match(D.questions[25], /подергивания в мышцах/);
-  assert.match(D.questions[26], /неправильное или нехорошее/);
+  assert.equal(smol.questions.length, 71);
+  assert.match(smol.questions[25], /подергивания в мышцах/);
+  assert.match(smol.questions[26], /неправильное или нехорошее/);
 });

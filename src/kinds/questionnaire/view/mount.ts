@@ -1,30 +1,32 @@
 /*
- * Экран опросника целиком: разметка, состояние, события. Работает с любым QuestionnaireDef.
+ * Экран опросника целиком: разметка, состояние, события. Работает с любым QuestionnaireSpec.
  *
  * Состояние и его изменения — в ../model.ts (без DOM), части экрана — в соседних файлах, здесь только связка:
- * событие → изменить модель → перерисовать то, что изменилось. Всё подписанное живёт в Scope и снимается
+ * событие → изменить модель → перерисовать то, что изменилось. Баллы считает сервер: ответ отмечается сразу,
+ * а профиль обновляется, когда придёт расчёт (createSync). Всё подписанное живёт в Scope и снимается
  * при переходе на другой тест.
  */
+import { api, createSync } from "../../../app/api";
 import { byId } from "../../../app/html";
 import { setPressed, bindHeader } from "../../../app/header";
 import { reducedMotion, tween } from "../../../app/motion";
 import { createScope } from "../../../app/scope";
 import { createSaver, readJson } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
-import { computeProfile } from "../engine";
-import { applyAnswer, emptySession, loadSaved, toSaved, type LastAnswer, type ProfileView, type Saved } from "../model";
-import type { Answer, Profile, QuestionnaireDef } from "../types";
-import { createViewCtx } from "./context";
+import { encodeAnswers } from "../answers";
+import { applyAnswer, emptySession, lastAnswer, loadSaved, toSaved, type LastAnswer, type ProfileView, type Saved } from "../model";
+import type { Answer, KeysResponse, Profile, QuestionnaireSpec, ScoreResponse } from "../types";
+import { createViewCtx, setKeys } from "./context";
 import { layoutHtml } from "./layout";
 import { fitValidityBody, renderImpact, renderStrip, renderValidity, type ValidityEls } from "./panel";
 import { renderTable } from "./profileTable";
 import { renderBars, renderChart, type ProfileViewData } from "./profileViews";
-import { buildQuestions, renderQuestion } from "./questions";
+import { applyKeys, buildQuestions, renderQuestion } from "./questions";
 import { buildSheet, renderSheetCell } from "./sheet";
 
 const KEY_ANSWER: Record<string, Answer> = { Digit1: "Y", Numpad1: "Y", KeyY: "Y", Digit2: "N", Numpad2: "N", KeyN: "N", Digit3: "?", Numpad3: "?", Slash: "?" };
 
-export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx: AppContext): Unmount {
+export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ctx: AppContext): Unmount {
   const v = createViewCtx(def);
   const scope = createScope();
   const WIDE = window.matchMedia("(min-width: 1001px)");
@@ -56,9 +58,15 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   const loaded = loadSaved(def, readJson<Saved>(def.storageKey), WIDE.matches);
   let session = loaded.session;
   const prefs = loaded.prefs;
-  let profile: Profile = computeProfile(def, session.answers);
+  /** Последний расчёт сервера; null — ещё не пришёл. */
+  let profile: Profile | null = null;
+  /** Что изменил последний ответ (по двум расчётам сервера). */
   let last: LastAnswer | null = null;
+  /** На какой вопрос ответили последним — подсвечивается сразу, не дожидаясь сервера. */
+  let lastQ: number | null = null;
   let cur = 0;
+  /** Перешли к следующему вопросу клавишей — после расчёта проверить, что он не ушёл под выросшую шапку. */
+  let followCur = false;
 
   const saver = createSaver(def.storageKey, () => toSaved(session, prefs, WIDE.matches));
   scope.add(saver.flush);
@@ -70,7 +78,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   // ---------- отрисовка ----------
   function renderRow(i: number) {
     const a = session.answers[i];
-    const isLast = !!last && last.q === i;
+    const isLast = lastQ === i;
     renderQuestion(v, questionEl(i), i, a, { cur: i === cur, last: isLast });
     renderSheetCell(sheetCell(i), i, a, session.history[i], isLast);
   }
@@ -83,7 +91,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   const drawn: Record<ProfileView, number> = { table: -1, bars: -1, chart: -1 };
   let chartW = 0;
   const chartWidthFor = (w: number) => Math.round(Math.min(800, Math.max(300, w)));
-  const viewData = (): ProfileViewData => ({ def, profile, changed: new Set(last ? last.changed : []), before: last ? last.before : null, focus: v.focus });
+  const viewData = (): ProfileViewData => ({ def, profile: profile!, changed: new Set(last ? last.changed : []), before: last ? last.before : null, focus: v.focus });
 
   /*
    * Точки графика не прыгают, а за 350 мс доезжают до нового профиля. chartT — что нарисовано сейчас
@@ -97,7 +105,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     stopTween();
     const data = viewData();
     const from = chartT;
-    const to = profile.t;
+    const to = profile!.t;
     if (!from || drawn.chart === -1 || reducedMotion() || def.scaleOrder.every((s) => from[s] === to[s])) {
       chartT = { ...to };
       renderChart(el.chart, chartW, data);
@@ -112,6 +120,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   }
 
   function renderProfile(force = false) {
+    if (!profile) return;
     if (!prefs.showProfile && !WIDE.matches) return; // шторка закрыта — нарисуем при открытии
     const view = prefs.profileView;
     if (view === "chart") {
@@ -133,6 +142,11 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   }
 
   function renderScores() {
+    if (!profile) {
+      el.impact.className = "impact";
+      el.impact.innerHTML = `<span class="impact-empty">Загружаю баллы…</span>`;
+      return;
+    }
     version++;
     renderValidity(v, validity, profile);
     renderStrip(v, el.strip, profile, last, prefs.stripAll);
@@ -173,14 +187,15 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
 
   // ---------- действия ----------
   function setAnswer(i: number, value: Answer, advance: boolean) {
-    const prevLast = last ? last.q : null;
+    const prevLast = lastQ;
     const prevCur = cur;
-    last = applyAnswer(def, session, profile, i, value, v.focus);
-    profile = last.after;
+    applyAnswer(session, i, value);
+    lastQ = i;
     cur = advance && session.answers[i] !== null && i < v.n - 1 ? i + 1 : i;
     for (const q of new Set([i, prevCur, cur, ...(prevLast === null ? [] : [prevLast])])) renderRow(q);
-    renderScores();
+    scoring.request();
     saver.schedule();
+    followCur = advance;
     if (advance) scrollToQuestion(cur);
   }
 
@@ -190,6 +205,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     renderRow(prev);
     renderRow(cur);
     if (scroll) scrollToQuestion(cur);
+    else followCur = false; // выбрали вопрос мышью — прокрутку не трогаем
   }
 
   function scrollToQuestion(i: number, flash = false) {
@@ -236,10 +252,11 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   function resetAll() {
     if (!window.confirm(`Сбросить все ответы и историю ${def.title}?`)) return;
     session = emptySession(def);
-    profile = computeProfile(def, session.answers);
     last = null;
+    lastQ = null;
     cur = 0;
     renderAll();
+    scoring.request();
     saver.schedule();
     window.scrollTo({ top: 0 });
     toast("Результаты сброшены");
@@ -249,6 +266,41 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
     el.toast.textContent = msg;
     scope.timeout(() => { if (el.toast.textContent === msg) el.toast.textContent = ""; }, 3000);
   }
+
+  // ---------- обмен с сервером ----------
+
+  /** Профиль по текущим ответам. q — вопрос, ответ на который пересчитываем (null — загрузка или сброс). */
+  const scoring = createSync(scope, {
+    async send(signal) {
+      const q = lastQ;
+      const r = await api<ScoreResponse>(`api/questionnaire/${def.id}/score`, { body: { answers: encodeAnswers(session.answers) }, signal });
+      return { next: r.profile, q };
+    },
+    onResult({ next, q }) {
+      last = profile && q !== null ? lastAnswer(def, q, profile, next, v.focus) : null;
+      profile = next;
+      renderScores();
+      // Строка «что изменил ответ» в шапке могла стать выше и закрыть вопрос, к которому только что перешли.
+      if (followCur) scrollToQuestion(cur);
+      followCur = false;
+    },
+    onBusy: (busy) => el.panel.setAttribute("aria-busy", String(busy)),
+    onError() {
+      el.impact.className = "impact miss";
+      el.impact.innerHTML = `<span class="imp-note">Нет связи с сервером — баллы пересчитаются, как только она появится. Ответы сохранены.</span>`;
+    }
+  });
+
+  /** Ключ по отслеживаемым шкалам и свой список ответов: строки ключа, подсветка, «что дал ответ». */
+  const keys = createSync(scope, {
+    send: (signal) => api<KeysResponse>(`api/questionnaire/${def.id}/keys`, { signal }),
+    onResult(r) {
+      setKeys(v, r);
+      applyKeys(v, el.questions);
+      for (let i = 0; i < v.n; i++) if (session.answers[i] !== null) renderRow(i);
+      if (profile) renderImpact(v, el.impact, last, last ? session.answers[last.q] : null);
+    }
+  });
 
   // ---------- события ----------
   scope.on(el.questions, "click", (e) => {
@@ -270,7 +322,7 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   });
 
   scope.on(el.strip, "click", (e) => {
-    if (!(e.target as Element).closest("[data-more]")) return;
+    if (!profile || !(e.target as Element).closest("[data-more]")) return;
     prefs.stripAll = !prefs.stripAll;
     renderStrip(v, el.strip, profile, last, prefs.stripAll);
     updatePanelHeight();
@@ -328,6 +380,8 @@ export function mountQuestionnaire(def: QuestionnaireDef, root: HTMLElement, ctx
   buildQuestions(v, el.questions);
   buildSheet(el.sheetGrid, v.n);
   renderAll();
+  keys.request();
+  scoring.request();
 
   return () => {
     scope.dispose();

@@ -1,7 +1,7 @@
 /*
  * Регистрационный лист: клетка на каждый вопрос с ответом и отметкой, менялся ли он.
  */
-import { cellState } from "../engine";
+import { cellState } from "../answers";
 import type { MaybeAnswer } from "../types";
 import { LETTER } from "./context";
 

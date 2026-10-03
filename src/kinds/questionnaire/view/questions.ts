@@ -1,6 +1,7 @@
 /*
  * Список вопросов: строка с кнопками ответа, строка ключа (видна при «Показать ключ») и строка
  * «что дал этот ответ». Вопросы строятся один раз, дальше обновляется только изменившийся вопрос.
+ * Ключ приходит с сервера после показа вопросов — тогда его строки и подсветку дорисовывает applyKeys.
  */
 import { escapeHtml } from "../../../app/html";
 import { answerEffect } from "../model";
@@ -11,6 +12,7 @@ const scalesWord = (list: string[]) => (list.length > 1 ? "шкалы " : "шк�
 
 /** Строка ключа: «Ответ: «Нет» · Ключ: «Да» → шкалы F, 1 · «Нет» → шкала 3». */
 function keyLineHtml(v: ViewCtx, i: number): string {
+  if (!v.keysReady) return `<span class="key-label">Ключ:</span><span class="none">загружается…</span>`;
   const keys = v.keys[i].filter((k) => v.focus.has(k.scale));
   const hint = v.useHints ? v.hints[i + 1] : undefined;
   const ans = hint ? `<span class="key-label">Ответ:</span><b class="ans-${hint === "?" ? "dk" : hint}">«${WORD[hint]}»</b><span class="sep">·</span>` : "";
@@ -40,8 +42,13 @@ export function buildQuestions(v: ViewCtx, list: HTMLElement): void {
   );
   // Одна вставка целиком быстрее, чем сотни отдельных (566 вопросов СМИЛ).
   list.innerHTML = html.join("");
+}
+
+/** Ключ пришёл: строки ключа под вопросами и подсветка ответов, которые дают баллы. */
+export function applyKeys(v: ViewCtx, list: HTMLElement): void {
   for (const li of list.children) {
     const i = Number((li as HTMLElement).dataset.i);
+    li.querySelector(".q-key")!.innerHTML = keyLineHtml(v, i);
     for (const a of keyAnswers(v, i)) li.querySelector(`button[data-a="${a}"]`)!.classList.add("scores-key");
   }
 }
@@ -49,6 +56,7 @@ export function buildQuestions(v: ViewCtx, list: HTMLElement): void {
 /** Почему ответ не дал баллов (или что дал бы другой ответ). */
 export function noScoreText(v: ViewCtx, i: number, a: Answer): string {
   if (a === "?") return "«Не знаю» баллов не даёт";
+  if (!v.keysReady) return "";
   const { other, alt } = answerEffect(v.keys[i], v.focus, a);
   return other.length
     ? `«${WORD[a]}» баллов не даёт (даёт «${WORD[alt]}»: ${other.join(", ")})`
@@ -74,8 +82,8 @@ export function renderQuestion(v: ViewCtx, li: HTMLElement, i: number, a: MaybeA
     b.setAttribute("aria-pressed", String(on));
   }
   const impact = li.querySelector<HTMLElement>(".q-impact")!;
-  impact.hidden = a === null;
-  if (a !== null) impact.innerHTML = impactHtml(v, i, a);
+  impact.hidden = a === null || !v.keysReady;
+  if (!impact.hidden) impact.innerHTML = impactHtml(v, i, a!);
   li.classList.toggle("last", state.last && a !== null);
   li.classList.toggle("cur", state.cur);
 }

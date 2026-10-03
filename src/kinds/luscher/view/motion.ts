@@ -9,18 +9,15 @@ export interface Snapshot {
   /** Копия нажатой карточки или фигуры на её месте на экране — она и полетит. */
   ghost: HTMLElement | null;
   stepId: string | null;
-  /** Положение метки на шкале тревожности (style.left). */
-  gauge: string | null;
 }
 
 const FLY_MS = 380;
 
 /** Запомнить, что было на экране перед выбором value. */
-export function snapshot(stage: HTMLElement, results: HTMLElement, stepId: string | null, value: number | null): Snapshot {
-  const gauge = results.querySelector<HTMLElement>(".lu-gauge i")?.style.left ?? null;
-  if (reducedMotion()) return { ghost: null, stepId, gauge: null };
+export function snapshot(stage: HTMLElement, stepId: string | null, value: number | null): Snapshot {
+  if (reducedMotion()) return { ghost: null, stepId };
   const src = value === null ? null : stage.querySelector<HTMLElement>(`[data-v="${value}"]`);
-  return { ghost: src ? makeGhost(src) : null, stepId, gauge };
+  return { ghost: src ? makeGhost(src) : null, stepId };
 }
 
 function makeGhost(src: HTMLElement): HTMLElement {
@@ -39,10 +36,9 @@ function makeGhost(src: HTMLElement): HTMLElement {
 
 /**
  * После перерисовки: карточка летит в конец ряда «выбрано» (если шаг тот же и ряд есть) или мягко исчезает;
- * новый шаг или новая пара появляются; метка тревожности доезжает до нового места.
+ * новый шаг или новая пара появляются.
  */
-export function play(before: Snapshot, stage: HTMLElement, results: HTMLElement, stepId: string | null, host: HTMLElement): void {
-  moveGauge(before.gauge, results);
+export function play(before: Snapshot, stage: HTMLElement, stepId: string | null, host: HTMLElement): void {
   if (reducedMotion()) return;
   const sameStep = before.stepId === stepId;
 
@@ -78,8 +74,7 @@ export function play(before: Snapshot, stage: HTMLElement, results: HTMLElement,
 }
 
 /** После отмены выбора: возвращённая карточка проявляется на своём месте. */
-export function playUndo(before: Snapshot, stage: HTMLElement, results: HTMLElement, stepId: string | null, value: number): void {
-  moveGauge(before.gauge, results);
+export function playUndo(before: Snapshot, stage: HTMLElement, stepId: string | null, value: number): void {
   if (reducedMotion()) return;
   if (before.stepId !== stepId) {
     stage.animate([{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE });
@@ -89,7 +84,11 @@ export function playUndo(before: Snapshot, stage: HTMLElement, results: HTMLElem
     [{ opacity: 0, transform: "scale(0.85)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: EASE });
 }
 
-function moveGauge(old: string | null, results: HTMLElement) {
+/** Положение метки на шкале тревожности — запомнить до перерисовки результата. */
+export const gaugeLeft = (results: HTMLElement): string | null => results.querySelector<HTMLElement>(".lu-gauge i")?.style.left ?? null;
+
+/** После перерисовки результата метка тревожности доезжает до нового места. */
+export function moveGauge(old: string | null, results: HTMLElement): void {
   const mark = results.querySelector<HTMLElement>(".lu-gauge i");
   if (!old || !mark || mark.style.left === old || reducedMotion()) return;
   mark.animate([{ left: old }, { left: mark.style.left }], { duration: 450, easing: EASE });

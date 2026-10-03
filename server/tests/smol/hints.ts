@@ -3,7 +3,7 @@
  * Формат: номер вопроса: "Y" (Да), "N" (Нет) или "?" (Не знаю). Например: 1: "N", 2: "Y".
  * На подсчёт баллов не влияет. Если список пустой, подсвечиваются ответы по ключу теста.
  */
-import type { Hints } from "../../kinds/questionnaire/types";
+import type { Hints } from "../../../src/kinds/questionnaire/types";
 
 export const SMOL_HINTS: Hints = {
   1: "N",

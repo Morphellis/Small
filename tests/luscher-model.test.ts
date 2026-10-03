@@ -4,7 +4,7 @@
 import { describe, expect, test } from "vitest";
 import { hintFor, type Pick } from "../src/kinds/luscher/flow";
 import { derive, layoutFor, loadSaved, replayValid, toSaved, emptySession } from "../src/kinds/luscher/model";
-import { anxiety, anxietyMarks, deviation, vegetativeText } from "../src/kinds/luscher/scoring";
+import { anxiety, anxietyMarks, deviation, vegetativeText } from "../server/luscher/scoring";
 
 describe("эталон подсчёта по всем раскладкам", () => {
   test("распределение тревожности, отклонение, знаки «!» и ВК не изменились", () => {

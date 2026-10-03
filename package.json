@@ -5,18 +5,19 @@
   "license": "UNLICENSED",
   "author": "Одиночная палата",
   "type": "module",
-  "description": "Тренажёр психологических тестов (СМОЛ, СМИЛ и другие): статический сайт на Vite + TypeScript",
+  "description": "Тренажёр психологических тестов (СМОЛ, СМИЛ, ММИЛ, Люшер): сайт на Vite + TypeScript, подсчёт на сервере (Node.js)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "build": "tsc --noEmit && vite build && vite build --config vite.server.config.ts && vite-node tools/check-leaks.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "new-test": "node tools/new-test.mjs",
     "fixture": "vite-node tools/make-fixture.ts --",
     "e2e": "node tools/e2e/smoke.mjs",
-    "perf": "node tools/e2e/perf.mjs"
+    "perf": "node tools/e2e/perf.mjs",
+    "start": "node dist-server/main.mjs",
+    "preview": "npm run build && npm start"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

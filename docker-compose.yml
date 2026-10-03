@@ -1,0 +1,38 @@
+# Сайт на своём сервере: приложение (подсчёт + страница) и Caddy перед ним (HTTPS, сжатие).
+#
+#   SITE_DOMAIN=trainer.example.ru docker compose up -d --build
+#
+# Домен должен указывать на этот сервер (A-запись) — тогда Caddy сам получит и будет продлевать сертификат.
+# Без SITE_DOMAIN сайт поднимется на https://localhost (сертификат Caddy для проверки на своём компьютере).
+
+services:
+  app:
+    build: .
+    image: trainer-app
+    restart: unless-stopped
+    environment:
+      TRUST_PROXY: "1"
+    # Наружу приложение не смотрит: к нему ходит только Caddy по внутренней сети.
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

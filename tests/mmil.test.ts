@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
+import { computeProfile, questionKeys } from "../server/questionnaire/engine";
 import type { Answer, MaybeAnswer } from "../src/kinds/questionnaire/types";
-import { MMIL_DATA as D } from "../src/tests/mmil/data";
-import { mmil } from "../src/tests/mmil/definition";
-import { K_ON, MMIL_HINTS } from "../src/tests/mmil/hints";
+import { MMIL_DATA as D } from "../server/tests/mmil/data";
+import { mmil } from "../server/tests/mmil/definition";
+import { K_ON, MMIL_HINTS } from "../server/tests/mmil/hints";
 
 const N = 377;
 
@@ -30,10 +30,10 @@ describe("ММИЛ: как пример результата psytests (mmlM5-uPO
 
 describe("ММИЛ: данные", () => {
   test("377 утверждений в порядке бланка psytests", () => {
-    expect(D.questions.length).toBe(N);
-    expect(D.questions[0]).toMatch(/работа медбрата/);
-    expect(D.questions[375]).toMatch(/изжога/);
-    expect(D.questions[376]).toMatch(/В хорошую погоду/);
+    expect(mmil.questions.length).toBe(N);
+    expect(mmil.questions[0]).toMatch(/работа медбрата/);
+    expect(mmil.questions[375]).toMatch(/изжога/);
+    expect(mmil.questions[376]).toMatch(/В хорошую погоду/);
   });
 
   test("выбор обязательный: без «Не знаю»", () => {

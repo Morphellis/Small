@@ -1,17 +1,27 @@
 /*
- * Проверка описаний всех опросников из реестра: ловит опечатки в данных нового теста до выкладки.
- * Новый опросник проверяется сам, как только он добавлен в src/app/registry.ts.
+ * Проверка описаний всех опросников: ловит опечатки в данных нового теста до выкладки.
+ * Открытая часть (src/tests/<id>/spec.ts, на сайте) и полная (server/tests/<id>/, на сервере) должны сходиться.
  */
 import { describe, expect, test } from "vitest";
-import { computeProfile } from "../../src/kinds/questionnaire/engine";
+import { computeProfile } from "../../server/questionnaire/engine";
+import { QUESTIONNAIRES } from "../../server/registry";
 import { isQuestionnaireModule } from "../../src/kinds/questionnaire";
 import { TESTS } from "../../src/app/registry";
 
 const modules = await Promise.all(TESTS.map((t) => t.load()));
-const DEFS = modules.filter(isQuestionnaireModule).map((m) => m.def);
+const SPECS = modules.filter(isQuestionnaireModule).map((m) => m.def);
+const DEFS = Object.values(QUESTIONNAIRES);
+
+test("у каждого опросника сайта есть подсчёт на сервере, и открытая часть та же самая", () => {
+  expect(SPECS.map((s) => s.id).sort()).toEqual(DEFS.map((d) => d.id).sort());
+  for (const spec of SPECS) {
+    const def = QUESTIONNAIRES[spec.id];
+    for (const [k, v] of Object.entries(spec)) expect((def as unknown as Record<string, unknown>)[k], `${spec.id}.${k}`).toEqual(v);
+  }
+});
 
 test("опросники из реестра найдены", () => {
-  expect(DEFS.map((d) => d.id)).toEqual(expect.arrayContaining(["smol", "smil"]));
+  expect(SPECS.map((d) => d.id)).toEqual(expect.arrayContaining(["smol", "smil"]));
 });
 
 test("у всех тестов в реестре разные id, и каждый загружается", async () => {
@@ -24,7 +34,7 @@ test("у всех тестов в реестре разные id, и кажды�
 });
 
 test("у опросников разные ключи хранения", () => {
-  const keys = DEFS.map((d) => d.storageKey);
+  const keys = SPECS.map((d) => d.storageKey);
   expect(new Set(keys).size).toBe(keys.length);
 });
 
@@ -61,7 +71,7 @@ for (const def of DEFS) {
     });
 
     test("подсказки, контрольные пункты и шкалы упора ссылаются на существующее", () => {
-      for (const [q, a] of Object.entries(def.ui.hints)) {
+      for (const [q, a] of Object.entries(def.hints)) {
         expect(Number(q) >= 1 && Number(q) <= N, `подсказка к вопросу ${q}`).toBe(true);
         expect(["Y", "N", "?"]).toContain(a);
       }

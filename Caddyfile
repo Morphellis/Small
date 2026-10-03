@@ -1,0 +1,7 @@
+# Caddy перед приложением: HTTPS (сертификат получает и продлевает сам), сжатие, передача запросов в app:8080.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+	header -Server
+	header Strict-Transport-Security "max-age=31536000"
+}

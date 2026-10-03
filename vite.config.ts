@@ -1,8 +1,29 @@
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+/*
+ * npm run dev: API подсчёта (server/api.ts) работает прямо внутри dev-сервера Vite — отдельный сервер не нужен,
+ * правки в server/ подхватываются сами. В продакшене то же API отдаёт server/main.ts.
+ */
+function devApi(): Plugin {
+  return {
+    name: "dev-api",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = (req.url ?? "").split("?")[0];
+        if (!path.startsWith("/api/")) return next();
+        server.ssrLoadModule("/server/api.ts")
+          .then((m) => (m as typeof import("./server/api")).handleApi(req, res, path))
+          .catch(next);
+      });
+    }
+  };
+}
 
 // base "./": сайт работает и в корне домена, и в подпапке (morphellis.github.io/Small/).
 export default defineConfig({
   base: "./",
+  plugins: [devApi()],
   // Не выбрасывать при сжатии комментарии «/*! … */» — так в собранных файлах остаётся знак авторского права.
   esbuild: { legalComments: "inline" },
   build: {

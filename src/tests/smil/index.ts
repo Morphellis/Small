@@ -1,4 +1,4 @@
 import { questionnaireModule } from "../../kinds/questionnaire";
-import { smil } from "./definition";
+import { smil } from "./spec";
 
 export default questionnaireModule(smil);

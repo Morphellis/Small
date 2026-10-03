@@ -1,40 +1,38 @@
 /*
  * Правая колонка теста Люшера (результат) и строка прогресса под шапкой.
+ * Показатели считает сервер (LuscherResult); протокол шагов, которые на них не влияют, — из журнала здесь.
  */
 import { escapeHtml } from "../../../app/html";
-import { ACHROMATIC, PAIR_TABLES, achromaticOrder, need, pairWins } from "../flow";
+import { ANXIETY_BANDS, bandOf } from "../bands";
+import { ACHROMATIC, MAX_ANXIETY_ORDER, PAIR_TABLES, achromaticOrder, need, pairWins } from "../flow";
 import type { Derived } from "../model";
-import {
-  ANXIETY_BANDS, MAX_ANXIETY_ORDER, anxiety, anxietyMarks, bandOf, deviation, vegetative, vegetativeBand, vegetativeText
-} from "../scoring";
-import type { LuscherDef } from "../types";
+import type { LuscherDef, LuscherResult, OrderScore } from "../types";
 import { figureSvg, stepShort, stepTitle, swatch } from "./common";
 
 const MARKS = ["", "!", "!!", "!!!"];
 
-export function progressHtml(def: LuscherDef, d: Derived): string {
+export function progressHtml(def: LuscherDef, d: Derived, result: LuscherResult | null): string {
   const chips = d.steps.map((s) => {
     const done = (d.picks[s.id]?.length ?? 0) >= need(s);
     const cls = done ? "done" : s.id === d.step?.id ? "cur" : "";
     return `<span class="lu-pstep ${cls}" title="${escapeHtml(stepTitle(def, s))}">${stepShort(s)}</span>`;
   }).join("");
-  const a = d.main ? anxiety(d.main.order) : null;
+  const a = result?.main?.anxiety ?? null;
   return chips + `<span class="spacer"></span><span class="lu-anx-mini${a === null ? "" : " t-" + bandOf(ANXIETY_BANDS, a).tone}">` +
     `Тревожность: <b>${a ?? "—"}</b>${a === null ? "" : "<small> / 12</small>"}</span>`;
 }
 
-function orderRow(label: string, order: string | null): string {
-  if (!order) return `<tr><th>${label}</th><td colspan="9" class="lu-empty">ещё не сделан</td></tr>`;
-  const marks = anxietyMarks(order);
-  return `<tr><th>${label}</th>${[...order].map((c, i) =>
-    `<td><span class="lu-mark">${MARKS[marks[i]]}</span>${swatch(Number(c))}</td>`
-  ).join("")}<td class="lu-sum">${anxiety(order)}</td></tr>`;
+function orderRow(label: string, s: OrderScore | null): string {
+  if (!s) return `<tr><th>${label}</th><td colspan="9" class="lu-empty">ещё не сделан</td></tr>`;
+  return `<tr><th>${label}</th>${[...s.order].map((c, i) =>
+    `<td><span class="lu-mark">${MARKS[s.marks[i]]}</span>${swatch(Number(c))}</td>`
+  ).join("")}<td class="lu-sum">${s.anxiety}</td></tr>`;
 }
 
-function scoreHtml(d: Derived): string {
-  if (!d.main) return `<p class="lu-empty">Показатель тревожности появится после первого восьмицветового выбора.</p>`;
-  const { order, n } = d.main;
-  const a = anxiety(order);
+function scoreHtml(result: LuscherResult | null): string {
+  if (!result) return `<p class="lu-empty">Считаю…</p>`;
+  if (!result.main) return `<p class="lu-empty">Показатель тревожности появится после первого восьмицветового выбора.</p>`;
+  const { anxiety: a, n } = result.main;
   const band = bandOf(ANXIETY_BANDS, a);
   return `
         <div class="lu-score t-${band.tone}">
@@ -45,8 +43,8 @@ function scoreHtml(d: Derived): string {
           <p class="lu-band">${escapeHtml(band.label)}${n === 1 ? " · <small>предварительно, по первому выбору; итог считается по второму</small>" : ""}</p>
         </div>
         <div class="lu-extra">
-          <div><span>Совокупное отклонение от аутогенной нормы</span><b>${deviation(order)}</b><small>из 32 — чем больше, тем выше непродуктивная напряжённость</small></div>
-          <div><span>Вегетативный коэффициент</span><b>${vegetativeText(order)}</b><small>${escapeHtml(vegetativeBand(vegetative(order)).label)}</small></div>
+          <div><span>Совокупное отклонение от аутогенной нормы</span><b>${result.main.deviation}</b><small>из 32 — чем больше, тем выше непродуктивная напряжённость</small></div>
+          <div><span>Вегетативный коэффициент</span><b>${result.main.vk}</b><small>${escapeHtml(result.main.vkLabel)}</small></div>
         </div>`;
 }
 
@@ -73,12 +71,12 @@ function protocolHtml(d: Derived): string {
       <p class="lu-small">Эти шаги на показатель тревожности не влияют; в таблицах рядом с цветом — число его побед в парах.</p>`;
 }
 
-export function resultsHtml(def: LuscherDef, d: Derived): string {
-  return `<h2>Результат</h2>${scoreHtml(d)}
+export function resultsHtml(def: LuscherDef, d: Derived, result: LuscherResult | null): string {
+  return `<h2>Результат</h2>${scoreHtml(result)}
       <h3>Разметка выборов</h3>
       <div class="lu-scroll"><table class="lu-marks">
         <thead><tr><th></th>${[1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<th>${i}</th>`).join("")}<th title="Тревожность">!</th></tr></thead>
-        <tbody>${orderRow("Выбор 1", d.first)}${orderRow("Выбор 2", d.second)}</tbody>
+        <tbody>${orderRow("Выбор 1", result?.first ?? null)}${orderRow("Выбор 2", result?.second ?? null)}</tbody>
       </table></div>
       <p class="lu-small">«!» — тревожность: основной цвет (синий, зелёный, красный, жёлтый) на 6–8-м месте или серый, коричневый, чёрный на 1–3-м.
       Итоговый показатель — по второму выбору. Наибольшая тревожность (12) — у раскладки ${[...MAX_ANXIETY_ORDER].map((c) => swatch(Number(c), " sm")).join("")}.</p>` +

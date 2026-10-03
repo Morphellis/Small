@@ -4,7 +4,7 @@
  * На подсчёт баллов не влияет. Утверждения, которых нет в списке, не подсвечиваются.
  * Источник: таблица «СМИЛ таблица.xlsx» (235 утверждений, из них 27 контрольных — «Не знаю»).
  */
-import type { Hints } from "../../kinds/questionnaire/types";
+import type { Hints } from "../../../src/kinds/questionnaire/types";
 
 export const SMIL_HINTS: Hints = {
   2: "N", 3: "N", 5: "Y", 8: "N", 9: "N", 10: "Y", 13: "Y", 14: "?", 15: "Y", 16: "N",

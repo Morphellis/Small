@@ -6,17 +6,14 @@
  *   npm run fixture <id>        например: npm run fixture mmil → tests/fixtures/mmil.json
  */
 import fs from "node:fs";
-import { TESTS } from "../src/app/registry";
-import { changedScales, computeProfile, questionKeys } from "../src/kinds/questionnaire/engine";
-import { isQuestionnaireModule } from "../src/kinds/questionnaire";
+import { computeProfile, questionKeys } from "../server/questionnaire/engine";
+import { QUESTIONNAIRES } from "../server/registry";
+import { changedScales } from "../src/kinds/questionnaire/answers";
 import type { MaybeAnswer } from "../src/kinds/questionnaire/types";
 
 const id = process.argv.filter((a) => a !== "--").pop()!;
-const entry = TESTS.find((t) => t.id === id);
-if (!entry) throw new Error("нет теста " + id);
-const mod = await entry.load();
-if (!isQuestionnaireModule(mod)) throw new Error(id + " — не опросник");
-const def = mod.def;
+const def = QUESTIONNAIRES[id];
+if (!def) throw new Error("нет опросника " + id + " в server/registry.ts");
 const N = def.questions.length;
 const values: MaybeAnswer[] = def.allowDontKnow === false ? ["Y", "N", null] : ["Y", "N", "?", null];
 

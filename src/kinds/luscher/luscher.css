@@ -261,3 +261,5 @@
 }
 
 .lu-sws { white-space: nowrap; }
+
+.lu-offline { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--hl-bg); color: var(--hl); font-size: 13px; }

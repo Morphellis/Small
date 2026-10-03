@@ -1,10 +1,12 @@
 /*
  * Модель прохождения опросника — без DOM, поэтому проверяется тестами (tests/questionnaire/model.test.ts):
  * ответы и история кликов, что изменил последний ответ, настройки экрана, сохранение и загрузка.
- * Экран (view/) только показывает то, что здесь посчитано.
+ * Баллы считает сервер; экран (view/) только показывает то, что здесь и там посчитано.
  */
-import { changedScales, computeProfile, normalizeAnswers, type QuestionKey } from "./engine";
-import type { Answer, MaybeAnswer, Profile, QuestionnaireDef } from "./types";
+import { changedScales, isAnswer, normalizeAnswers } from "./answers";
+import type { Answer, MaybeAnswer, Profile, QuestionKey, QuestionnaireSpec } from "./types";
+
+export { isAnswer };
 
 /** Ответы и история: history[i] — значения после каждого клика по вопросу i (для регистрационного листа). */
 export interface Session {
@@ -48,9 +50,7 @@ export interface Saved {
   stripAll?: boolean;
 }
 
-export const isAnswer = (v: unknown): v is Answer => v === "Y" || v === "N" || v === "?";
-
-export function emptySession(def: QuestionnaireDef): Session {
+export function emptySession(def: QuestionnaireSpec): Session {
   const n = def.questions.length;
   return { answers: new Array<MaybeAnswer>(n).fill(null), history: Array.from({ length: n }, () => []) };
 }
@@ -59,7 +59,7 @@ export function emptySession(def: QuestionnaireDef): Session {
 export const defaultPrefs = (wide: boolean): Prefs => ({ keyMode: false, showProfile: wide, profileView: "table", stripAll: false });
 
 /** Загрузка сохранённого: всё непонятное (старые версии, ручные правки) отбрасывается. */
-export function loadSaved(def: QuestionnaireDef, saved: Saved | null, wide: boolean): { session: Session; prefs: Prefs } {
+export function loadSaved(def: QuestionnaireSpec, saved: Saved | null, wide: boolean): { session: Session; prefs: Prefs } {
   const session = emptySession(def);
   const prefs = defaultPrefs(wide);
   if (!saved || typeof saved !== "object") return { session, prefs };
@@ -89,19 +89,20 @@ export function toSaved(session: Session, prefs: Prefs, wide: boolean): Saved {
   };
 }
 
-/**
- * Ответить на вопрос i. Повторный клик по тому же ответу снимает его. Меняет session на месте и возвращает,
- * что изменилось (before — профиль до ответа: он уже есть у экрана, пересчитывать не нужно).
- */
-export function applyAnswer(
-  def: QuestionnaireDef, session: Session, before: Profile, i: number, value: Answer, focus: ReadonlySet<string>
-): LastAnswer {
+/** Ответить на вопрос i. Повторный клик по тому же ответу снимает его. Меняет session на месте. */
+export function applyAnswer(session: Session, i: number, value: Answer): MaybeAnswer {
   const next = session.answers[i] === value ? null : value;
   session.answers[i] = next;
   session.history[i].push(next);
-  const after = computeProfile(def, session.answers);
+  return next;
+}
+
+/** Что изменил ответ на вопрос q: сравнение профиля до и после (оба посчитаны сервером). */
+export function lastAnswer(
+  def: QuestionnaireSpec, q: number, before: Profile, after: Profile, focus: ReadonlySet<string>
+): LastAnswer {
   const changedAll = changedScales(def, before, after);
-  return { q: i, changed: changedAll.filter((s) => focus.has(s)), changedAll, before, after };
+  return { q, changed: changedAll.filter((s) => focus.has(s)), changedAll, before, after };
 }
 
 /** Куда засчитывается ответ a на вопрос (только шкалы из focus) и какой ответ дал бы баллы вместо него. */

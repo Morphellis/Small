@@ -1,7 +1,10 @@
 /*
- * Опросник: вопросы с ответами «Да / Нет / Не знаю», шкалы по ключу, поправки, Т-баллы и достоверность.
- * Так устроены СМОЛ, СМИЛ и другие тесты семейства MMPI. Конкретный тест описывает себя объектом
- * QuestionnaireDef, а подсчёт (engine.ts) и экран (view.ts) общие.
+ * Опросник: вопросы с ответами «Да / Нет / Не знаю», шкалы, Т-баллы и достоверность.
+ * Так устроены СМОЛ, СМИЛ и другие тесты семейства MMPI.
+ *
+ * Здесь — только то, что видит браузер: тексты, названия шкал, настройки экрана и форма ответов сервера.
+ * Как считать (ключи, нормы, поправка K, правила достоверности, свои списки ответов) знает только сервер:
+ * server/questionnaire/types.ts.
  */
 
 /** Ответ: «Да / верно», «Нет / неверно», «Не знаю». */
@@ -23,16 +26,10 @@ export interface ScaleInfo {
   group: "control" | "clinical";
 }
 
-/** Ключ шкалы: номера вопросов (с 1), которые засчитываются ответом «Да» и ответом «Нет». */
-export interface ScaleKey {
-  yes: number[];
-  no: number[];
-}
-
-export interface TScore {
-  t: number;
-  /** Т получен продлением таблицы за её край (показывается с «≈»). */
-  extrapolated: boolean;
+/** В какую шкалу и каким ответом засчитывается вопрос. */
+export interface QuestionKey {
+  scale: string;
+  answer: Answer;
 }
 
 export interface ValidityCheck {
@@ -52,6 +49,7 @@ export interface Validity {
 
 export type Level = "high" | "low" | "norm";
 
+/** Профиль — то, что сервер возвращает на набор ответов. */
 export interface Profile {
   raw: Record<string, number>;
   /** Сколько прибавлено к шкалам поправкой K. */
@@ -68,14 +66,8 @@ export interface Profile {
   validity: Validity;
 }
 
-/** Что нужно правилу достоверности: сырые и Т-баллы. */
-export interface ScoresForValidity {
-  raw: Record<string, number>;
-  t: Record<string, number>;
-}
-
-/** Описание опросника. Всё, чем тесты отличаются друг от друга, — здесь. */
-export interface QuestionnaireDef {
+/** Открытая часть описания опросника: всё, что нужно экрану. */
+export interface QuestionnaireSpec {
   id: string;
   /** Название в текстах: «По методике СМИЛ…». */
   title: string;
@@ -85,25 +77,15 @@ export interface QuestionnaireDef {
   questions: string[];
   scaleOrder: string[];
   scaleInfo: Record<string, ScaleInfo>;
-  key: Record<string, ScaleKey>;
 
-  /** Шкалы, к которым прибавляется поправка K. */
+  /** Шкалы, к которым прибавляется поправка K (в таблице у них сырой балл с поправкой в скобках). */
   kCorrected: string[];
-  /** Сколько прибавить к шкалам при сыром K = k. */
-  kCorrection(k: number): Record<string, number>;
-  /** Перевод балла (с поправкой K) в Т. */
-  tScore(scale: string, x: number): TScore;
   /** Знаков после запятой у Т. */
   tDigits: number;
-  /** Т ≥ high — высокое значение, Т ≤ low — низкое. */
+  /** Т ≥ high — высокое значение, Т ≤ low — низкое (подписи оси на полосах профиля). */
   thresholds: { high: number; low: number };
-
-  validity(scores: ScoresForValidity): Validity;
   /** Правило достоверности одной фразой — для пояснения у плашки. */
   validityRule: string;
-
-  /** Контрольные пункты («Номер данного пункта следует обвести кружочком»): правильно отвечать «Не знаю». */
-  controlItems?: number[];
 
   /** false — выбор обязательный, только «Да» или «Нет» (как в ММИЛ). По умолчанию «Не знаю» есть. */
   allowDontKnow?: boolean;
@@ -115,12 +97,28 @@ export interface QuestionnaireDef {
 export interface QuestionnaireUi {
   /** Шкалы, на которых делаем упор: влияние ответа, ключ и подсветка только по ним, остальные приглушены. */
   focus: string[];
-  /** Свой список «правильных» ответов. */
-  hints: Hints;
-  /** Подсвечивать ответы по ключу, пока список hints пуст. */
+  /** Подсвечивать ответы по ключу, пока своего списка «правильных» ответов нет. */
   keyHighlight: boolean;
   /** Диапазон Т на полосах профиля. */
   bars: { min: number; max: number };
   /** Коридор нормы на графике. */
   band: [number, number];
+}
+
+// ---------- обмен с сервером (server/api.ts) ----------
+
+/** GET api/questionnaire/<id>/keys — ключ по отслеживаемым шкалам и свой список ответов (для «Показать ключ»). */
+export interface KeysResponse {
+  /** Для каждого вопроса (с 0): в какие отслеживаемые шкалы (ui.focus) и каким ответом он засчитывается. */
+  keys: QuestionKey[][];
+  hints: Hints;
+}
+
+/** POST api/questionnaire/<id>/score. answers — по символу на вопрос: Y, N, ? или «.» (нет ответа). */
+export interface ScoreRequest {
+  answers: string;
+}
+
+export interface ScoreResponse {
+  profile: Profile;
 }
