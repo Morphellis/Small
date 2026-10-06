@@ -103,7 +103,7 @@ button, select, input { font: inherit; color: inherit; }
 /* знак авторского права под любым тестом (разметка — в index.html) */
 .site-footer { max-width: 1360px; margin: 0 auto; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); text-align: center; font-size: 12px; line-height: 1.5; color: var(--muted); }
 
-/* у опросника на узком экране внизу закреплена кнопка «▲ Профиль» — подпись не должна под неё уходить */
+/* у опросника на узком экране внизу закреплена кнопка «▲ Нажмите для открытия шкал» — подпись не должна под неё уходить */
 @media (max-width: 1000px) { body:has(.side-open:not([hidden])) .site-footer { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
 
 @media (max-width: 1000px) { .keys-hint { display: none; } }
@@ -217,6 +217,8 @@ kbd {
   .btn .long { display: none; }
   .btn .short { display: inline; }
   .btn-theme { min-width: 34px; padding: 3px 5px; }
+  /* «Эталонные ответы» — в две строки помельче, чтобы кнопки шапки остались в один ряд */
+  .btn-key .short { display: inline-block; max-width: 6.2em; white-space: normal; line-height: 1.08; font-size: 12px; text-align: center; }
   .test-switch button { min-height: 36px; align-items: center; padding: 5px 12px; }
   .test-switch button b { font-size: 14px; letter-spacing: 0.02em; }
   /* переключатель тестов — отдельной строкой во всю ширину, кнопки ниже; тестов много — строка листается вбок */

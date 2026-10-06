@@ -171,7 +171,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
       b.classList.toggle("on", on);
       b.setAttribute("aria-selected", String(on));
     }
-    setPressed(el.keyBtn, prefs.keyMode, { on: "Скрыть ключ", off: "Показать ключ" });
+    setPressed(el.keyBtn, prefs.keyMode);
     document.body.classList.toggle("keymode", prefs.keyMode);
     for (const k of el.questions.querySelectorAll<HTMLElement>(".q-key")) k.hidden = !prefs.keyMode;
     updatePanelHeight();

@@ -28,8 +28,8 @@ export function buttonHtml(b: ButtonSpec): string {
     `<span class="long">${escapeHtml(b.label)}</span><span class="short">${escapeHtml(b.short ?? b.label)}</span></button>`;
 }
 
-/** Кнопка «Показать ключ» — есть у всех тренажёров. */
-export const keyButton = (pressed = false): ButtonSpec => ({ id: "keyBtn", label: "Показать ключ", short: "Ключ", cls: "btn-key", pressed });
+/** Кнопка «Эталонные ответы» (режим ключа) — есть у всех тренажёров. Включена — кнопка залита зелёным. */
+export const keyButton = (pressed = false): ButtonSpec => ({ id: "keyBtn", label: "Эталонные ответы", cls: "btn-key", pressed });
 
 export interface HeaderOptions {
   id?: string;

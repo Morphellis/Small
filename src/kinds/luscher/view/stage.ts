@@ -77,7 +77,7 @@ export function stageHtml(def: LuscherDef, d: Derived, keyMode: boolean, layout:
   const hint = keyMode ? hintFor(def.variant, step, k) : null;
   const note = !keyMode || step.kind === "pause" ? ""
     : hint !== null
-      ? `<p class="lu-note key">Ключ: выберите отмеченный цвет — <b>${escapeHtml(COLOR[hint].name)}</b>.</p>`
+      ? `<p class="lu-note key">Эталонный ответ: выберите отмеченный цвет — <b>${escapeHtml(COLOR[hint].name)}</b>.</p>`
       : `<p class="lu-note">На тревожность этот шаг не влияет — выбирайте как угодно.</p>`;
   const chosen = step.kind === "rank" || step.kind === "achromatic"
     ? `<div class="lu-chosen">${picks.map((c, i) => `<span class="lu-chip${isDislikePhase(def.variant, step, i) ? " dis" : ""}">${

@@ -180,8 +180,8 @@ async function questionnaire(id, total, { dk = true } = {}) {
   if (!wide) {
     await b.js(`window.scrollTo(0, 400);`);
     const bottomBtn = await b.js(`return document.getElementById("sideOpen").offsetParent !== null;`);
-    if (bottomBtn) await click("#sideOpen", `${id}: «▲ Профиль» внизу`);
-    else { await b.js(`window.scrollTo(0, 0);`); await click("#toggleProfile", `${id}: «Профиль» в шапке`); }
+    if (bottomBtn) await click("#sideOpen", `${id}: «▲ Нажмите для открытия шкал» внизу`);
+    else { await b.js(`window.scrollTo(0, 0);`); await click("#toggleProfile", `${id}: «Шкалы» в шапке`); }
     await sleep(350);
     const side = await b.js(`const r = document.getElementById("side").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, vis: getComputedStyle(document.getElementById("side")).visibility };`);
     check(side.vis === "visible" && side.top < side.h && side.bottom <= side.h + 1, `${id}: шторка профиля в пределах экрана (${Math.round(side.top)}–${Math.round(side.bottom)} из ${side.h})`);

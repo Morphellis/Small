@@ -88,7 +88,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     const hadLayout = d.step ? d.step.id in session.layouts : true;
     const layout = d.step?.kind === "rank" ? layoutFor(session, d.step) : null;
     if (!hadLayout && layout) saver.schedule(); // новая случайная раскладка — запомнить
-    setPressed(keyBtn, session.keyMode, { on: "Скрыть ключ", off: "Показать ключ" });
+    setPressed(keyBtn, session.keyMode);
     undoBtn.disabled = session.log.length === 0;
     stageEl.innerHTML = stageHtml(def, d, session.keyMode, layout);
     renderResults();

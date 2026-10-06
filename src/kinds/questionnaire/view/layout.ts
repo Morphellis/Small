@@ -13,7 +13,7 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
     actions: [
       `<span class="toast" id="toast" role="status" aria-live="polite"></span>`,
       buttonHtml(keyButton()),
-      buttonHtml({ id: "toggleProfile", label: "Профиль", cls: "btn-ghost", pressed: true })
+      buttonHtml({ id: "toggleProfile", label: "Шкалы", cls: "btn-ghost", pressed: true })
     ],
     // Что изменил последний ответ и все шкалы одной полоской — всегда перед глазами.
     below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip"></div>`
@@ -40,10 +40,10 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
     </main>
 
     <!-- Подробный профиль: колонка справа на широком экране, выезжающая снизу шторка на телефоне и планшете -->
-    <aside class="side" id="side" aria-label="Подробный профиль">
+    <aside class="side" id="side" aria-label="Шкалы">
       <div class="side-top">
-        <div class="side-head"><b>Профиль</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть профиль">✕</button></div>
-        <div class="view-switch" role="tablist" aria-label="Вид профиля">
+        <div class="side-head"><b>Шкалы</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть шкалы">✕</button></div>
+        <div class="view-switch" role="tablist" aria-label="Вид шкал">
           <button type="button" role="tab" data-view="table">Таблица</button>
           <button type="button" role="tab" data-view="bars">Шкалы</button>
           <button type="button" role="tab" data-view="chart">График</button>
@@ -64,5 +64,5 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
     </aside>
   </div>
 
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Профиль: таблица · шкалы · график</button>`;
+  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Нажмите для открытия шкал</button>`;
 }
