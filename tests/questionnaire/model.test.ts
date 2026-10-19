@@ -5,7 +5,7 @@ import { describe, expect, test } from "vitest";
 import { computeProfile, questionKeys } from "../../server/questionnaire/engine";
 import { smil } from "../../server/tests/smil/definition";
 import { smol } from "../../server/tests/smol/definition";
-import { answerEffect, applyAnswer, defaultPrefs, emptySession, lastAnswer, loadSaved, toSaved } from "../../src/kinds/questionnaire/model";
+import { answerEffect, answeredCount, applyAnswer, defaultPrefs, emptySession, lastAnswer, loadSaved, nextUnanswered, toSaved, undoAnswer } from "../../src/kinds/questionnaire/model";
 
 const focus = new Set(smol.ui.focus);
 
@@ -17,6 +17,29 @@ describe("ответы", () => {
     expect(s.history[8]).toEqual(["Y", "N", null]);
   });
 
+
+  test("«Вернуть» после снятого ответа: ответ и история — как до снятия", () => {
+    const s = emptySession(smol);
+    applyAnswer(s, 8, "Y");
+    applyAnswer(s, 8, "N");
+    applyAnswer(s, 8, "N");
+    expect(undoAnswer(s, 8)).toBe("N");
+    expect(s.history[8]).toEqual(["Y", "N"]);
+    expect(undoAnswer(s, 8)).toBe("Y");
+    expect(undoAnswer(s, 8)).toBe(null);
+    expect(s.history[8]).toEqual([]);
+  });
+
+  test("сколько отвечено и следующий вопрос без ответа (по кругу)", () => {
+    const s = emptySession(smol);
+    expect(answeredCount(s)).toBe(0);
+    expect(nextUnanswered(s, 0)).toBe(1);
+    for (let i = 0; i < 71; i++) if (i !== 3) applyAnswer(s, i, "Y");
+    expect(answeredCount(s)).toBe(70);
+    expect(nextUnanswered(s, 10)).toBe(3);
+    applyAnswer(s, 3, "N");
+    expect(nextUnanswered(s, 10)).toBe(null);
+  });
   test("что изменил ответ: вопрос 9 «Да» → F, 1, 2, 3 (и Т сдвинулись)", () => {
     const s = emptySession(smol);
     const before = computeProfile(smol, s.answers);

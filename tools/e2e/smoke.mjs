@@ -94,7 +94,8 @@ async function switching() {
   await open("smol");
   for (const t of ["smil", "mmil", "luscher8", "luscher", "smol"]) {
     await click(`.test-switch button[data-test="${t}"]`, `переключатель: ${t}`);
-    for (let i = 0; i < 30 && !(await b.js(`return location.hash === "#${t}" && !!document.querySelector("#keyBtn");`)); i++) await sleep(100);
+    // Адрес меняется сразу, а экран — когда загрузится код теста: ждём, пока отметится новый тест.
+    for (let i = 0; i < 30 && !(await b.js(`return location.hash === "#${t}" && document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`)); i++) await sleep(100);
     check(await b.js(`return document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`), `переключатель открывает ${t}`);
   }
 }
@@ -179,8 +180,9 @@ async function questionnaire(id, total, { dk = true } = {}) {
   }
   if (!wide) {
     await b.js(`window.scrollTo(0, 400);`);
-    const bottomBtn = await b.js(`return document.getElementById("sideOpen").offsetParent !== null;`);
-    if (bottomBtn) await click("#sideOpen", `${id}: «▲ Нажмите для открытия шкал» внизу`);
+    // Кнопка закреплена (position: fixed), у таких offsetParent всегда null — смотрим на display.
+    const bottomBtn = await b.js(`const e = document.getElementById("sideOpen"); return !e.hidden && getComputedStyle(e).display !== "none";`);
+    if (bottomBtn) await click("#sideOpen", `${id}: «Шкалы и профиль» внизу`);
     else { await b.js(`window.scrollTo(0, 0);`); await click("#toggleProfile", `${id}: «Шкалы» в шапке`); }
     await sleep(350);
     const side = await b.js(`const r = document.getElementById("side").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, vis: getComputedStyle(document.getElementById("side")).visibility };`);
@@ -206,6 +208,9 @@ async function questionnaire(id, total, { dk = true } = {}) {
   check(await b.js(`const li = document.getElementById("q-5"); const r = li.getBoundingClientRect(); return li.classList.contains("cur") && r.top >= 0 && r.bottom <= innerHeight + 1;`), `${id}: лист переводит к вопросу 5`);
   await b.key("0");
   check(!(await b.js(`return !!document.querySelector("#q-5 button.on");`)), `${id}: клавиша 0 снимает ответ`);
+  check(await b.js(`return document.getElementById("doneCount").textContent === "${total - 1}";`), `${id}: счётчик «Отвечено» уменьшился до ${total - 1}`);
+  await click(".snack-act", `${id}: «Вернуть» снятый ответ`);
+  check(await b.js(`return !!document.querySelector("#q-5 button.on") && document.getElementById("doneCount").textContent === "${total}";`), `${id}: «Вернуть» восстанавливает ответ`);
 
   await b.js(`window.scrollTo(0, 0);`);
   await click("#validitySum", `${id}: плашка достоверности`);
@@ -230,6 +235,9 @@ async function questionnaire(id, total, { dk = true } = {}) {
   await click("#resetBtn", `${id}: «Сбросить»`);
   await sleep(200);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === 0, `${id}: «Сбросить» очищает ответы`);
+  await click(".snack-act", `${id}: «Вернуть» после сброса`);
+  check((await count("#sheetGrid .cell:not(.st-empty)")) === saved, `${id}: «Вернуть» восстанавливает все ответы`);
+  await click("#resetBtn", `${id}: «Сбросить» ещё раз`);
 }
 
 async function luscher(id) {

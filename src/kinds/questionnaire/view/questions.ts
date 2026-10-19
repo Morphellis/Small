@@ -32,13 +32,14 @@ function keyAnswers(v: ViewCtx, i: number): Answer[] {
 }
 
 export function buildQuestions(v: ViewCtx, list: HTMLElement): void {
-  const buttons = `<button type="button" data-a="Y">Да</button><button type="button" data-a="N">Нет</button>` +
-    (v.dk ? `<button type="button" data-a="?">Не знаю</button>` : "");
+  // В Tab-порядке только кнопки текущего вопроса (их включает renderQuestion), иначе до листа — сотни остановок.
+  const buttons = `<button type="button" data-a="Y" tabindex="-1">Да</button><button type="button" data-a="N" tabindex="-1">Нет</button>` +
+    (v.dk ? `<button type="button" data-a="?" tabindex="-1">Не знаю</button>` : "");
   const html = v.def.questions.map((text, i) =>
     `<li class="q" id="q-${i + 1}" data-i="${i}">` +
-    `<span class="q-num">${i + 1}</span>` +
-    `<div class="q-body"><p class="q-text">${escapeHtml(text)}</p><div class="q-key" hidden>${keyLineHtml(v, i)}</div><div class="q-impact" hidden></div></div>` +
-    `<div class="q-btns" role="group" aria-label="Ответ на вопрос ${i + 1}">${buttons}</div></li>`
+    `<span class="q-num" id="qn-${i + 1}">${i + 1}</span>` +
+    `<div class="q-body"><p class="q-text" id="qt-${i + 1}">${escapeHtml(text)}</p><div class="q-key" hidden>${keyLineHtml(v, i)}</div><div class="q-impact" hidden></div></div>` +
+    `<div class="q-btns" role="group" aria-labelledby="qn-${i + 1} qt-${i + 1}">${buttons}</div></li>`
   );
   // Одна вставка целиком быстрее, чем сотни отдельных (566 вопросов СМИЛ).
   list.innerHTML = html.join("");
@@ -76,10 +77,13 @@ function impactHtml(v: ViewCtx, i: number, a: Answer): string {
 }
 
 export function renderQuestion(v: ViewCtx, li: HTMLElement, i: number, a: MaybeAnswer, state: { cur: boolean; last: boolean }): void {
-  for (const b of li.querySelectorAll<HTMLButtonElement>("button")) {
+  const btns = [...li.querySelectorAll<HTMLButtonElement>(".q-btns button")];
+  const stop = btns.find((b) => b.dataset.a === a) ?? btns[0];
+  for (const b of btns) {
     const on = b.dataset.a === a;
     b.classList.toggle("on", on);
     b.setAttribute("aria-pressed", String(on));
+    b.tabIndex = state.cur && b === stop ? 0 : -1;
   }
   const impact = li.querySelector<HTMLElement>(".q-impact")!;
   impact.hidden = a === null || !v.keysReady;

@@ -5,18 +5,19 @@
 import { buttonHtml, headerHtml, keyButton } from "../../../app/header";
 import type { AppContext } from "../../../app/types";
 
-export function layoutHtml(ctx: AppContext, dk: boolean): string {
+export function layoutHtml(ctx: AppContext, dk: boolean, n: number): string {
   const header = headerHtml(ctx, {
     id: "panel",
     label: "Баллы",
     afterSwitch: `<details class="validity" id="validity"><summary id="validitySum"></summary><div class="validity-body" id="validityBody"></div></details>`,
     actions: [
-      `<span class="toast" id="toast" role="status" aria-live="polite"></span>`,
+      // Сколько отвечено; нажатие ведёт к первому вопросу без ответа.
+      `<button type="button" class="btn btn-ghost btn-next" id="nextBtn"><span class="long">Отвечено </span><b id="doneCount">0</b><span class="of"> из ${n}</span><span class="of-short">/${n}</span></button>`,
       buttonHtml(keyButton()),
       buttonHtml({ id: "toggleProfile", label: "Шкалы", cls: "btn-ghost", pressed: true })
     ],
-    // Что изменил последний ответ и все шкалы одной полоской — всегда перед глазами.
-    below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip"></div>`
+    // Что изменил последний ответ и все шкалы одной полоской — всегда перед глазами. По нижнему краю — доля отвеченных.
+    below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip"></div>\n      <div class="progress-line" aria-hidden="true"><i id="progressFill"></i></div>`
   });
 
   return `${header}
@@ -43,10 +44,10 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
     <aside class="side" id="side" aria-label="Шкалы">
       <div class="side-top">
         <div class="side-head"><b>Шкалы</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть шкалы">✕</button></div>
-        <div class="view-switch" role="tablist" aria-label="Вид шкал">
-          <button type="button" role="tab" data-view="table">Таблица</button>
-          <button type="button" role="tab" data-view="bars">Шкалы</button>
-          <button type="button" role="tab" data-view="chart">График</button>
+        <div class="view-switch" role="group" aria-label="Вид шкал">
+          <button type="button" data-view="table" aria-pressed="false">Таблица</button>
+          <button type="button" data-view="bars" aria-pressed="false">Шкалы</button>
+          <button type="button" data-view="chart" aria-pressed="false">График</button>
         </div>
       </div>
       <div class="chart-wrap" id="chartWrap">
@@ -61,8 +62,9 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
           <tbody id="scoreBody"></tbody>
         </table>
       </div>
+      <p class="side-note">Тренажёр для изучения методики. Профиль здесь не психологическое заключение и не диагноз.</p>
     </aside>
   </div>
 
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Нажмите для открытия шкал</button>`;
+  <button type="button" class="side-open" id="sideOpen" aria-controls="side">Шкалы и профиль</button>`;
 }

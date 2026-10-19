@@ -11,10 +11,11 @@ import { byId } from "../../../app/html";
 import { setPressed, bindHeader } from "../../../app/header";
 import { reducedMotion, tween } from "../../../app/motion";
 import { createScope } from "../../../app/scope";
+import { createSnack } from "../../../app/snack";
 import { createSaver, readJson } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
 import { encodeAnswers } from "../answers";
-import { applyAnswer, emptySession, lastAnswer, loadSaved, toSaved, type LastAnswer, type ProfileView, type Saved } from "../model";
+import { answeredCount, applyAnswer, emptySession, lastAnswer, loadSaved, nextUnanswered, toSaved, undoAnswer, type LastAnswer, type ProfileView, type Saved, type Session } from "../model";
 import type { Answer, KeysResponse, Profile, QuestionnaireSpec, ScoreResponse } from "../types";
 import { createViewCtx, setKeys } from "./context";
 import { layoutHtml } from "./layout";
@@ -32,7 +33,8 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   const WIDE = window.matchMedia("(min-width: 1001px)");
   const NARROW = window.matchMedia("(max-width: 1000px)");
 
-  root.innerHTML = layoutHtml(ctx, v.dk);
+  root.innerHTML = layoutHtml(ctx, v.dk, v.n);
+  const snack = createSnack(root, scope);
   const el = {
     panel: byId(root, "panel"),
     layout: byId(root, "layout"),
@@ -48,7 +50,9 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     toggleProfile: byId(root, "toggleProfile"),
     side: byId(root, "side"),
     sideOpen: byId(root, "sideOpen"),
-    toast: byId(root, "toast"),
+    nextBtn: byId<HTMLButtonElement>(root, "nextBtn"),
+    doneCount: byId(root, "doneCount"),
+    progressFill: byId(root, "progressFill"),
     questions: byId(root, "questions"),
     sheetGrid: byId(root, "sheetGrid")
   };
@@ -80,7 +84,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     const a = session.answers[i];
     const isLast = lastQ === i;
     renderQuestion(v, questionEl(i), i, a, { cur: i === cur, last: isLast });
-    renderSheetCell(sheetCell(i), i, a, session.history[i], isLast);
+    renderSheetCell(sheetCell(i), i, a, session.history[i], isLast, i === cur);
   }
 
   /*
@@ -169,7 +173,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     for (const b of el.viewButtons) {
       const on = b.dataset.view === view;
       b.classList.toggle("on", on);
-      b.setAttribute("aria-selected", String(on));
+      b.setAttribute("aria-pressed", String(on));
     }
     setPressed(el.keyBtn, prefs.keyMode);
     document.body.classList.toggle("keymode", prefs.keyMode);
@@ -179,24 +183,64 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     updateSheetHeight();
   }
 
+  /** Сколько отвечено: счётчик в шапке (он же ведёт к пропущенному) и полоса по нижнему краю шапки. */
+  function renderProgress() {
+    const done = answeredCount(session);
+    const all = done === v.n;
+    el.doneCount.textContent = String(done);
+    el.progressFill.style.width = (done / v.n) * 100 + "%";
+    el.nextBtn.classList.toggle("complete", all);
+    el.nextBtn.disabled = all;
+    const label = `Отвечено ${done} из ${v.n}` + (all ? "" : ". Перейти к вопросу без ответа");
+    el.nextBtn.title = label;
+    el.nextBtn.setAttribute("aria-label", label);
+  }
+
   function renderAll() {
     for (let i = 0; i < v.n; i++) renderRow(i);
+    renderProgress();
     renderScores();
     renderLayout();
   }
 
   // ---------- действия ----------
+
+  /** Если фокус у кнопок вопросов или в листе — перенести его на текущий вопрос (клавиатурой ходят по ним). */
+  function followFocus() {
+    const a = document.activeElement;
+    if (!a || !(el.questions.contains(a) || el.sheetGrid.contains(a))) return;
+    const target = el.questions.contains(a)
+      ? questionEl(cur).querySelector<HTMLElement>('.q-btns button[tabindex="0"]')
+      : sheetCell(cur);
+    target?.focus({ preventScroll: true });
+  }
+
   function setAnswer(i: number, value: Answer, advance: boolean) {
     const prevLast = lastQ;
     const prevCur = cur;
-    applyAnswer(session, i, value);
+    const prev = session.answers[i];
+    const next = applyAnswer(session, i, value);
     lastQ = i;
-    cur = advance && session.answers[i] !== null && i < v.n - 1 ? i + 1 : i;
+    cur = advance && next !== null && i < v.n - 1 ? i + 1 : i;
     for (const q of new Set([i, prevCur, cur, ...(prevLast === null ? [] : [prevLast])])) renderRow(q);
+    renderProgress();
     scoring.request();
     saver.schedule();
     followCur = advance;
     if (advance) scrollToQuestion(cur);
+    followFocus();
+    // Повторное нажатие на выбранный ответ снимает его — это легко сделать случайно, поэтому можно вернуть.
+    if (next === null && prev !== null) {
+      snack.show(`Ответ на вопрос ${i + 1} снят`, { label: "Вернуть", run: () => restoreAnswer(i) });
+    }
+  }
+
+  function restoreAnswer(i: number) {
+    undoAnswer(session, i);
+    renderRow(i);
+    renderProgress();
+    scoring.request();
+    saver.schedule();
   }
 
   function setCur(i: number, scroll: boolean) {
@@ -206,6 +250,19 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     renderRow(cur);
     if (scroll) scrollToQuestion(cur);
     else followCur = false; // выбрали вопрос мышью — прокрутку не трогаем
+    followFocus();
+  }
+
+  /** К первому вопросу без ответа после текущего. */
+  function goToUnanswered() {
+    const i = nextUnanswered(session, cur);
+    if (i === null) return;
+    setCur(i, false);
+    scrollToQuestion(i, true);
+    // С клавиатуры — сразу к кнопкам этого вопроса.
+    if (document.activeElement === el.nextBtn && el.nextBtn.matches(":focus-visible")) {
+      questionEl(i).querySelector<HTMLElement>('.q-btns button[tabindex="0"]')?.focus({ preventScroll: true });
+    }
   }
 
   function scrollToQuestion(i: number, flash = false) {
@@ -249,22 +306,29 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     saver.schedule();
   }
 
+  /** Сброс без окна «Вы уверены?»: всё очищается сразу, а «Вернуть» в сообщении снизу восстанавливает ответы. */
   function resetAll() {
-    if (!window.confirm(`Сбросить все ответы и историю ${def.title}?`)) return;
-    session = emptySession(def);
+    if (answeredCount(session) === 0 && session.history.every((h) => !h.length)) return;
+    const before = { session: structuredClone(session), cur };
+    replaceSession(emptySession(def), null, 0);
+    window.scrollTo({ top: 0 });
+    snack.show("Ответы сброшены", {
+      label: "Вернуть",
+      run: () => {
+        replaceSession(before.session, null, before.cur);
+        scrollToQuestion(cur);
+      }
+    });
+  }
+
+  function replaceSession(next: Session, nextLastQ: number | null, nextCur: number) {
+    session = next;
     last = null;
-    lastQ = null;
-    cur = 0;
+    lastQ = nextLastQ;
+    cur = nextCur;
     renderAll();
     scoring.request();
     saver.schedule();
-    window.scrollTo({ top: 0 });
-    toast("Результаты сброшены");
-  }
-
-  function toast(msg: string) {
-    el.toast.textContent = msg;
-    scope.timeout(() => { if (el.toast.textContent === msg) el.toast.textContent = ""; }, 3000);
   }
 
   // ---------- обмен с сервером ----------
@@ -309,9 +373,13 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     if (!li) return;
     const i = Number(li.dataset.i);
     const b = t.closest<HTMLButtonElement>("button[data-a]");
-    if (b) setAnswer(i, b.dataset.a as Answer, false);
+    // Первый ответ на вопрос переводит к следующему (прокрутка — только если он ушёл за край экрана);
+    // правка старого ответа оставляет на месте.
+    if (b) setAnswer(i, b.dataset.a as Answer, session.answers[i] === null);
     else setCur(i, false);
   });
+
+  scope.on(el.nextBtn, "click", goToUnanswered);
 
   scope.on(el.sheetGrid, "click", (e) => {
     const c = (e.target as Element).closest<HTMLElement>(".cell");
@@ -351,6 +419,17 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     }
     const tag = ((e.target as Element).tagName || "").toLowerCase();
     if (tag === "select" || tag === "textarea" || tag === "input") return;
+    // ← → — между кнопками ответа одного вопроса (одна остановка Tab на вопрос).
+    const group = (e.target as Element).closest?.(".q-btns");
+    if (group && (e.code === "ArrowLeft" || e.code === "ArrowRight")) {
+      const btns = [...group.querySelectorAll<HTMLButtonElement>("button")];
+      const k = btns.indexOf(e.target as HTMLButtonElement);
+      const next = btns[(k + (e.code === "ArrowRight" ? 1 : btns.length - 1)) % btns.length];
+      e.preventDefault();
+      for (const b of btns) b.tabIndex = b === next ? 0 : -1;
+      next.focus();
+      return;
+    }
     const answer = KEY_ANSWER[e.code];
     if (answer && (answer !== "?" || v.dk)) {
       e.preventDefault();

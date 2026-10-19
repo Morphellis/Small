@@ -97,6 +97,26 @@ export function applyAnswer(session: Session, i: number, value: Answer): MaybeAn
   return next;
 }
 
+/** Отменить последний клик по вопросу i (например, случайно снятый ответ): ответ и история — как до него. */
+export function undoAnswer(session: Session, i: number): MaybeAnswer {
+  const h = session.history[i];
+  h.pop();
+  session.answers[i] = h.length ? h[h.length - 1] : null;
+  return session.answers[i];
+}
+
+export const answeredCount = (session: Session): number => session.answers.reduce((n, a) => n + (a === null ? 0 : 1), 0);
+
+/** Первый вопрос без ответа после from (по кругу); null — отвечены все. */
+export function nextUnanswered(session: Session, from: number): number | null {
+  const n = session.answers.length;
+  for (let k = 1; k <= n; k++) {
+    const i = (from + k) % n;
+    if (session.answers[i] === null) return i;
+  }
+  return null;
+}
+
 /** Что изменил ответ на вопрос q: сравнение профиля до и после (оба посчитаны сервером). */
 export function lastAnswer(
   def: QuestionnaireSpec, q: number, before: Profile, after: Profile, focus: ReadonlySet<string>

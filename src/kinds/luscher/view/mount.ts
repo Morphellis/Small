@@ -7,6 +7,7 @@ import { api, createSync } from "../../../app/api";
 import { bindHeader, buttonHtml, headerHtml, keyButton, setPressed } from "../../../app/header";
 import { byId } from "../../../app/html";
 import { createScope } from "../../../app/scope";
+import { createSnack } from "../../../app/snack";
 import { createSaver, readJson, readString, writeString } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
 import { currentStep } from "../flow";
@@ -49,6 +50,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   scope.on(window, "pagehide", saver.flush);
 
   root.innerHTML = layoutHtml(ctx);
+  const snack = createSnack(root, scope);
   const stageEl = byId(root, "luStage"), resultsEl = byId(root, "luResults"), progressEl = byId(root, "luProgress");
   const keyBtn = byId(root, "keyBtn"), undoBtn = byId<HTMLButtonElement>(root, "undoBtn");
   bindHeader(root, ctx, scope);
@@ -128,13 +130,20 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     render();
   });
   scope.on(undoBtn, "click", undo);
-  scope.on(byId(root, "resetBtn"), "click", () => {
-    if (session.log.length && !window.confirm("Начать тест заново? Все выборы будут удалены.")) return;
-    session = emptySession(session.keyMode);
+  function replaceSession(next: typeof session) {
+    session = next;
     result = null; // старый результат к новому прохождению не относится
     saver.schedule();
     render();
     scoring.request();
+  }
+
+  // Сброс без окна «Вы уверены?»: выборы очищаются сразу, «Вернуть» в сообщении снизу восстанавливает их.
+  scope.on(byId(root, "resetBtn"), "click", () => {
+    if (!session.log.length) return;
+    const before = structuredClone(session);
+    replaceSession(emptySession(session.keyMode));
+    snack.show("Выборы сброшены, тест начат заново", { label: "Вернуть", run: () => replaceSession(before) });
   });
 
   scope.on(document, "keydown", (e) => {

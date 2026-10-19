@@ -80,5 +80,6 @@ export function resultsHtml(def: LuscherDef, d: Derived, result: LuscherResult |
       </table></div>
       <p class="lu-small">«!» — тревожность: основной цвет (синий, зелёный, красный, жёлтый) на 6–8-м месте или серый, коричневый, чёрный на 1–3-м.
       Итоговый показатель — по второму выбору. Наибольшая тревожность (12) — у раскладки ${[...MAX_ANXIETY_ORDER].map((c) => swatch(Number(c), " sm")).join("")}.</p>` +
-    (def.variant === "full" ? protocolHtml(d) : "");
+    (def.variant === "full" ? protocolHtml(d) : "") +
+    `<p class="side-note">Тренажёр для изучения методики. Результат здесь не психологическое заключение и не диагноз.</p>`;
 }
