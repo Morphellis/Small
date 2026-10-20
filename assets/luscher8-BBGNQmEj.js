@@ -1,0 +1,1 @@
+import{l as r}from"./kind-luscher-D07qe13S.js";import"./shared-lGd9xCjH.js";import"./index-Cc9zbnkj.js";import"./kind-luscher-DQ2Ug18N.js";/*! © 2026 «Одиночная палата». All rights reserved. Copying is prohibited — see LICENSE. */const s=r({id:"luscher8",title:"Восьмицветовой тест Люшера",storageKey:"luscher8-trainer-v1",variant:"short"});export{s as default};

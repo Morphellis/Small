@@ -1,0 +1,1 @@
+import{q as o}from"./kind-questionnaire-BcdTLSYg.js";import{m}from"./spec-BQ8sp5al.js";import"./shared-lGd9xCjH.js";import"./index-Cc9zbnkj.js";import"./kind-questionnaire-XshzbYIC.js";/*! © 2026 «Одиночная палата». All rights reserved. Copying is prohibited — see LICENSE. */const a=o(m);export{a as default};

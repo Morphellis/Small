@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>MMPI</title>
+  <meta name="description" content="Тренажёр психологических тестов: СМОЛ, СМИЛ, ММИЛ и цветовой тест Люшера — баллы и профиль пересчитываются после каждого ответа.">
+  <meta name="author" content="Одиночная палата">
+  <meta name="copyright" content="© 2026 «Одиночная палата». Все права защищены.">
+  <meta name="theme-color" content="#1c1c1a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://morphellis.github.io/Small/">
+  <meta property="og:title" content="MMPI">
+  <meta property="og:description" content="Тренажёр психологических тестов: СМОЛ, СМИЛ, ММИЛ и цветовой тест Люшера — баллы и профиль пересчитываются после каждого ответа.">
+  <meta property="og:image" content="https://morphellis.github.io/Small/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>
+    /* тема до отрисовки, чтобы не мигало: сохранённый выбор, иначе как в системе */
+    (function () {
+      var t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      try { var v = localStorage.getItem("trainer-theme"); if (v === "light" || v === "dark") t = v; } catch (e) {}
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <script type="module" crossorigin src="./assets/index-Cc9zbnkj.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CSKoL_ob.css">
+</head>
+<body>
+  <div id="app"></div>
+  <footer class="site-footer">© 2026 «Одиночная палата». Все права защищены. Копирование кода, оформления и текстов сайта без письменного разрешения запрещено.</footer>
+</body>
+</html>

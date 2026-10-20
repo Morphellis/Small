@@ -1,0 +1,1 @@
+import{l as r}from"./kind-luscher-D07qe13S.js";import"./shared-lGd9xCjH.js";import"./index-Cc9zbnkj.js";import"./kind-luscher-DQ2Ug18N.js";/*! © 2026 «Одиночная палата». All rights reserved. Copying is prohibited — see LICENSE. */const o=r({id:"luscher",title:"Полный цветовой тест Люшера",storageKey:"luscher-full-trainer-v1",variant:"full"});export{o as default};
