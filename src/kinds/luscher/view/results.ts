@@ -31,7 +31,7 @@ function orderRow(label: string, s: OrderScore | null): string {
 
 function scoreHtml(result: LuscherResult | null): string {
   if (!result) return `<p class="lu-empty">Считаю…</p>`;
-  if (!result.main) return `<p class="lu-empty">Показатель тревожности появится после первого восьмицветового выбора.</p>`;
+  if (!result.main) return `<p class="lu-empty">Показатель появится после первого выбора из восьми цветов.</p>`;
   const { anxiety: a, n } = result.main;
   const band = bandOf(ANXIETY_BANDS, a);
   return `
@@ -40,10 +40,10 @@ function scoreHtml(result: LuscherResult | null): string {
           <div class="lu-gauge">${ANXIETY_BANDS.map((b) =>
             `<span class="g-${b.tone}" style="flex:${b.to - b.from + 1}"></span>`).join("")}<i style="left:${(a / 12) * 100}%"></i></div>
           <div class="lu-gauge-lbl"><span>0</span><span>3</span><span>7</span><span>11</span><span>12</span></div>
-          <p class="lu-band">${escapeHtml(band.label)}${n === 1 ? " · <small>предварительно, по первому выбору; итог считается по второму</small>" : ""}</p>
+          <p class="lu-band">${escapeHtml(band.label)}${n === 1 ? " · <small>пока по первому выбору, итог будет по второму</small>" : ""}</p>
         </div>
         <div class="lu-extra">
-          <div><span>Совокупное отклонение от аутогенной нормы</span><b>${result.main.deviation}</b><small>из 32 — чем больше, тем выше непродуктивная напряжённость</small></div>
+          <div><span>Совокупное отклонение от аутогенной нормы</span><b>${result.main.deviation}</b><small>из 32. Чем больше, тем сильнее напряжение</small></div>
           <div><span>Вегетативный коэффициент</span><b>${result.main.vk}</b><small>${escapeHtml(result.main.vkLabel)}</small></div>
         </div>`;
 }
@@ -68,7 +68,7 @@ function protocolHtml(d: Derived): string {
   }
   if (!rows.length) return "";
   return `<h3>Протокол</h3><table class="lu-proto"><tbody>${rows.join("")}</tbody></table>
-      <p class="lu-small">Эти шаги на показатель тревожности не влияют; в таблицах рядом с цветом — число его побед в парах.</p>`;
+      <p class="lu-small">На тревожность эти шаги не влияют. Число под цветом: сколько пар он выиграл.</p>`;
 }
 
 export function resultsHtml(def: LuscherDef, d: Derived, result: LuscherResult | null): string {
@@ -78,8 +78,7 @@ export function resultsHtml(def: LuscherDef, d: Derived, result: LuscherResult |
         <thead><tr><th></th>${[1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<th>${i}</th>`).join("")}<th title="Тревожность">!</th></tr></thead>
         <tbody>${orderRow("Выбор 1", result?.first ?? null)}${orderRow("Выбор 2", result?.second ?? null)}</tbody>
       </table></div>
-      <p class="lu-small">«!» — тревожность: основной цвет (синий, зелёный, красный, жёлтый) на 6–8-м месте или серый, коричневый, чёрный на 1–3-м.
-      Итоговый показатель — по второму выбору. Наибольшая тревожность (12) — у раскладки ${[...MAX_ANXIETY_ORDER].map((c) => swatch(Number(c), " sm")).join("")}.</p>` +
+      <p class="lu-small">«!» ставится, если основной цвет стоит на 6–8-м месте или тёмный на 1–3-м. Итог считается по второму выбору. Максимум 12 даёт ряд ${[...MAX_ANXIETY_ORDER].map((c) => swatch(Number(c), " sm")).join("")}.</p>` +
     (def.variant === "full" ? protocolHtml(d) : "") +
-    `<p class="side-note">Тренажёр для изучения методики. Результат здесь не психологическое заключение и не диагноз.</p>`;
+    `<p class="side-note">Это тренажёр. Результат здесь не заключение психолога и не диагноз.</p>`;
 }

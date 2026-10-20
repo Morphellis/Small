@@ -2,6 +2,7 @@
  * Тема. Начальную (сохранённый выбор или как в системе) ставит маленький скрипт в index.html ещё до отрисовки,
  * чтобы страница не мигала. Здесь — кнопка переключения, её можно поставить в шапку любого теста.
  */
+import { ICON } from "./icons";
 import { writeString } from "./storage";
 
 export const THEME_KEY = "trainer-theme";
@@ -11,8 +12,10 @@ const isLight = () => document.documentElement.getAttribute("data-theme") === "l
 /** Кнопка показывает, на какую тему переключит: в тёмной — солнце, в светлой — луна. */
 export function renderThemeButton(btn: HTMLElement): void {
   const light = isLight();
-  btn.textContent = light ? "☾" : "☀";
-  btn.title = light ? "Включить тёмную тему" : "Включить светлую тему";
+  btn.title = light ? "Тёмная тема" : "Светлая тема";
+  // Подпись видна только в меню телефона; на широком экране кнопка — один значок.
+  btn.innerHTML = (light ? ICON.moon : ICON.sun) + `<span class="lbl">${btn.title}</span>`;
+  btn.setAttribute("aria-label", btn.title);
 }
 
 export function bindThemeButton(btn: HTMLElement, signal: AbortSignal): void {

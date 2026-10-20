@@ -23,6 +23,7 @@ export function startRouter(root: HTMLElement, tests: readonly TestEntry[]): voi
     const ticket = ++loading;
     current = entry;
     writeString(LAST_TEST_KEY, entry.id);
+    document.title = `${entry.title}: тренажёр MMPI`;
     if (location.hash.slice(1) !== entry.id) history.replaceState(null, "", "#" + entry.id);
     const module = await entry.load();
     if (ticket !== loading) return; // пока грузился, выбрали другой тест

@@ -8,7 +8,7 @@
  */
 import { api, createSync } from "../../../app/api";
 import { byId } from "../../../app/html";
-import { setPressed, bindHeader } from "../../../app/header";
+import { setPressed, bindHeader, pinPanel } from "../../../app/header";
 import { reducedMotion, tween } from "../../../app/motion";
 import { createScope } from "../../../app/scope";
 import { createSnack } from "../../../app/snack";
@@ -54,8 +54,11 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     doneCount: byId(root, "doneCount"),
     progressFill: byId(root, "progressFill"),
     questions: byId(root, "questions"),
-    sheetGrid: byId(root, "sheetGrid")
+    sheetGrid: byId(root, "sheetGrid"),
+    finish: byId(root, "finish")
   };
+  /** На сколько шапка уходит за верх экрана на узком экране (строка с переключателем тестов уезжает). */
+  let pinOff = 0;
   const validity: ValidityEls = { root: byId<HTMLDetailsElement>(root, "validity"), summary: byId(root, "validitySum"), body: byId(root, "validityBody") };
 
   // ---------- состояние ----------
@@ -152,8 +155,14 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
       return;
     }
     version++;
+    const empty = answeredCount(session) === 0;
+    el.side.classList.toggle("is-empty", empty);
+    // «Достоверен» без единого ответа ничего не значит. Место под плашкой остаётся, чтобы шапка не меняла высоту.
+    validity.root.style.visibility = empty ? "hidden" : "";
+    // На телефоне плашка в меню «⋯» — недостоверный результат отмечен точкой на самой кнопке меню.
+    byId(root, "moreBtn").classList.toggle("alert", !empty && !profile.validity.valid);
     renderValidity(v, validity, profile);
-    renderStrip(v, el.strip, profile, last, prefs.stripAll);
+    renderStrip(v, el.strip, profile, last, prefs.stripAll, empty);
     renderImpact(v, el.impact, last, last ? session.answers[last.q] : null);
     renderProfile();
   }
@@ -161,8 +170,6 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   function renderLayout() {
     el.layout.classList.toggle("no-side", !prefs.showProfile);
     el.sideOpen.hidden = prefs.showProfile;
-    // Строка шкал в шапке дублирует профиль — нужна, только когда его колонки не видно (закрыта или на узком экране шторка).
-    el.strip.hidden = WIDE.matches && prefs.showProfile;
     setPressed(el.toggleProfile, prefs.showProfile);
     el.toggleProfile.setAttribute("aria-expanded", String(prefs.showProfile));
     const view = prefs.profileView;
@@ -191,6 +198,8 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     el.progressFill.style.width = (done / v.n) * 100 + "%";
     el.nextBtn.classList.toggle("complete", all);
     el.nextBtn.disabled = all;
+    // «Готово» — когда ответили на все (появляется под последним вопросом, ничего не сдвигает).
+    el.finish.hidden = !all;
     const label = `Отвечено ${done} из ${v.n}` + (all ? "" : ". Перейти к вопросу без ответа");
     el.nextBtn.title = label;
     el.nextBtn.setAttribute("aria-label", label);
@@ -219,6 +228,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     const prevLast = lastQ;
     const prevCur = cur;
     const prev = session.answers[i];
+    const doneBefore = answeredCount(session);
     const next = applyAnswer(session, i, value);
     lastQ = i;
     cur = advance && next !== null && i < v.n - 1 ? i + 1 : i;
@@ -232,7 +242,15 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     // Повторное нажатие на выбранный ответ снимает его — это легко сделать случайно, поэтому можно вернуть.
     if (next === null && prev !== null) {
       snack.show(`Ответ на вопрос ${i + 1} снят`, { label: "Вернуть", run: () => restoreAnswer(i) });
+    } else if (doneBefore === v.n - 1 && answeredCount(session) === v.n) {
+      snack.show(`Готово: отвечены все ${v.n}`, { label: "Профиль", run: openProfile });
     }
+  }
+
+  /** Показать подробный профиль: на узком экране открыть шторку, на широком — колонку справа. */
+  function openProfile() {
+    setPrefs({ showProfile: true });
+    if (WIDE.matches) el.side.focus({ preventScroll: true });
   }
 
   function restoreAnswer(i: number) {
@@ -271,7 +289,9 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     // Обновить это до расчёта, иначе вопрос окажется под снова прилипшей шапкой.
     updatePanelHeight();
     const r = li.getBoundingClientRect();
-    const top = Math.max(8, el.panel.getBoundingClientRect().bottom + 8);
+    // Низ шапки, когда она прилипла (на узком экране верхняя строка к тому времени уедет).
+    const stuck = el.panel.classList.contains("unstick") ? 0 : el.panel.offsetHeight - pinOff;
+    const top = Math.max(8, Math.min(el.panel.getBoundingClientRect().bottom, stuck) + 8);
     // Видимая часть — между шапкой и открытой шторкой профиля (на узком экране), а не до низа окна.
     const bottom = window.innerHeight - sheetHeight();
     if (r.top < top || r.bottom > bottom - 8 || flash) {
@@ -295,7 +315,9 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   function updatePanelHeight() {
     // Высота липкой панели нужна боковой колонке (прилипает под ней) и отступу при прокрутке к вопросу.
     // На узком низком экране слишком высокая панель не прилипает, чтобы не закрывать вопросы.
-    const h = el.panel.getBoundingClientRect().height;
+    // На узком экране прилипает только нижняя часть шапки: счётчик, последний ответ, шкалы.
+    pinOff = pinPanel(el.panel, NARROW.matches);
+    const h = el.panel.getBoundingClientRect().height - pinOff;
     document.documentElement.style.setProperty("--panel-h", h + "px");
     el.panel.classList.toggle("unstick", NARROW.matches && h > window.innerHeight * 0.45);
   }
@@ -351,7 +373,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     onBusy: (busy) => el.panel.setAttribute("aria-busy", String(busy)),
     onError() {
       el.impact.className = "impact miss";
-      el.impact.innerHTML = `<span class="imp-note">Нет связи с сервером — баллы пересчитаются, как только она появится. Ответы сохранены.</span>`;
+      el.impact.innerHTML = `<span class="imp-note">Нет связи с сервером. Ответы сохранены, баллы досчитаются, когда связь вернётся.</span>`;
     }
   });
 
@@ -380,6 +402,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   });
 
   scope.on(el.nextBtn, "click", goToUnanswered);
+  scope.on(byId(root, "finishBtn"), "click", openProfile);
 
   scope.on(el.sheetGrid, "click", (e) => {
     const c = (e.target as Element).closest<HTMLElement>(".cell");

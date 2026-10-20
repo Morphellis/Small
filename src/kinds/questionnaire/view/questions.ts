@@ -10,18 +10,19 @@ import { WORD, type ViewCtx } from "./context";
 
 const scalesWord = (list: string[]) => (list.length > 1 ? "шкалы " : "шкала ") + list.join(", ");
 
-/** Строка ключа: «Ответ: «Нет» · Ключ: «Да» → шкалы F, 1 · «Нет» → шкала 3». */
+/**
+ * Строка ключа: «Ключ: «Да» → шкалы F, 1 · «Нет» → шкала 3». Эталонный ответ отмечен галочкой
+ * на самой кнопке, поэтому здесь его не повторяем.
+ */
 function keyLineHtml(v: ViewCtx, i: number): string {
-  if (!v.keysReady) return `<span class="key-label">Ключ:</span><span class="none">загружается…</span>`;
+  if (!v.keysReady) return `<em class="key-label">Ключ</em><span class="none">загружается…</span>`;
   const keys = v.keys[i].filter((k) => v.focus.has(k.scale));
-  const hint = v.useHints ? v.hints[i + 1] : undefined;
-  const ans = hint ? `<span class="key-label">Ответ:</span><b class="ans-${hint === "?" ? "dk" : hint}">«${WORD[hint]}»</b><span class="sep">·</span>` : "";
-  if (!keys.length) return `${ans}<span class="key-label">Ключ:</span><span class="none">не влияет на отслеживаемые шкалы</span>`;
+  if (!keys.length) return `<span class="none">На отслеживаемые шкалы не влияет</span>`;
   const parts = (["Y", "N"] as const).flatMap((a) => {
     const list = keys.filter((k) => k.answer === a).map((k) => k.scale);
     return list.length ? [`<span class="tag"><b class="ans-${a}">«${WORD[a]}»</b> → ${scalesWord(list)}</span>`] : [];
   });
-  return `${ans}<span class="key-label">Ключ:</span>${parts.join(`<span class="sep">·</span>`)}`;
+  return `<em class="key-label">Ключ</em>${parts.join(`<span class="sep">·</span>`)}`;
 }
 
 /** Какие кнопки подсвечивать в режиме ключа: свой «правильный» ответ или все ответы, дающие баллы. */
@@ -50,6 +51,8 @@ export function applyKeys(v: ViewCtx, list: HTMLElement): void {
   for (const li of list.children) {
     const i = Number((li as HTMLElement).dataset.i);
     li.querySelector(".q-key")!.innerHTML = keyLineHtml(v, i);
+    // Вопрос без ключа: строка ключа приглушена, а «что дал ответ» её бы только повторила.
+    li.classList.toggle("q-free", !v.keys[i].some((k) => v.focus.has(k.scale)));
     for (const a of keyAnswers(v, i)) li.querySelector(`button[data-a="${a}"]`)!.classList.add("scores-key");
   }
 }

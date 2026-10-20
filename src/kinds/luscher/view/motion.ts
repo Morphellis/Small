@@ -71,6 +71,8 @@ export function play(before: Snapshot, stage: HTMLElement, stepId: string | null
   }
   anim.addEventListener("finish", () => g.remove());
   anim.addEventListener("cancel", () => g.remove());
+  // В фоновой вкладке браузер может не доиграть анимацию — копия карточки не должна остаться поверх экрана.
+  setTimeout(() => g.remove(), FLY_MS + 300);
 }
 
 /** После отмены выбора: возвращённая карточка проявляется на своём месте. */

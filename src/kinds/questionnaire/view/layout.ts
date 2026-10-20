@@ -3,6 +3,7 @@
  * в браузере (tools/e2e), поэтому их не переименовывать без нужды.
  */
 import { buttonHtml, headerHtml, keyButton } from "../../../app/header";
+import { ICON } from "../../../app/icons";
 import type { AppContext } from "../../../app/types";
 
 export function layoutHtml(ctx: AppContext, dk: boolean, n: number): string {
@@ -11,13 +12,17 @@ export function layoutHtml(ctx: AppContext, dk: boolean, n: number): string {
     label: "Баллы",
     afterSwitch: `<details class="validity" id="validity"><summary id="validitySum"></summary><div class="validity-body" id="validityBody"></div></details>`,
     actions: [
-      // Сколько отвечено; нажатие ведёт к первому вопросу без ответа.
-      `<button type="button" class="btn btn-ghost btn-next" id="nextBtn"><span class="long">Отвечено </span><b id="doneCount">0</b><span class="of"> из ${n}</span><span class="of-short">/${n}</span></button>`,
       buttonHtml(keyButton()),
       buttonHtml({ id: "toggleProfile", label: "Шкалы", cls: "btn-ghost", pressed: true })
     ],
-    // Что изменил последний ответ и все шкалы одной полоской — всегда перед глазами. По нижнему краю — доля отвеченных.
-    below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip"></div>\n      <div class="progress-line" aria-hidden="true"><i id="progressFill"></i></div>`
+    // Эта часть шапки остаётся на экране и на телефоне: сколько отвечено, что изменил последний ответ, все шкалы.
+    below:
+      `<div class="status">` +
+      // Сколько отвечено и полоса прогресса; нажатие ведёт к первому вопросу без ответа.
+      `<button type="button" class="btn-next" id="nextBtn"><span class="cnt"><b id="doneCount">0</b> из ${n}<span class="hint"> · к пропущенному</span></span>` +
+      `<span class="track" aria-hidden="true"><i id="progressFill"></i></span></button>` +
+      `<div class="impact" id="impact" aria-live="polite"></div>` +
+      `<div class="strip" id="strip"></div></div>`
   });
 
   return `${header}
@@ -27,29 +32,36 @@ export function layoutHtml(ctx: AppContext, dk: boolean, n: number): string {
       <p class="keys-hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · ${dk ? "<kbd>3</kbd> Не знаю · " : ""}<kbd>0</kbd> снять ответ · <kbd>↑</kbd><kbd>↓</kbd> другой вопрос</p>
       <ol class="questions" id="questions"></ol>
 
+      <section class="finish" id="finish" hidden>
+        <p><b>Готово:</b> отвечены все ${n}.</p>
+        <button type="button" class="btn" id="finishBtn">Открыть профиль</button>
+      </section>
+
       <section class="sheet" aria-labelledby="sheetTitle">
         <h2 id="sheetTitle">Регистрационный лист</h2>
         <div class="sheet-scroll"><div class="sheet-grid" id="sheetGrid"></div></div>
         <ul class="legend">
           <li><span class="cell st-empty"></span>нет ответа</li>
-          <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>«Да» или «Нет» с первого раза</li>
-          <li><span class="cell st-changed a-N">Н</span>ответ менялся (Да ↔ Нет${dk ? " или после «Не знаю»" : ""})</li>${dk ? `
+          <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>ответ с первого раза</li>
+          <li><span class="cell st-changed a-N">Н</span>ответ менялся</li>${dk ? `
           <li><span class="cell st-dk a-dk">?</span>«Не знаю»</li>
-          <li><span class="cell st-dkAfter a-dk">?</span>сначала «Да»/«Нет», затем «Не знаю»</li>` : ""}
+          <li><span class="cell st-dkAfter a-dk">?</span>«Не знаю» после «Да» или «Нет»</li>` : ""}
         </ul>
       </section>
     </main>
 
     <!-- Подробный профиль: колонка справа на широком экране, выезжающая снизу шторка на телефоне и планшете -->
-    <aside class="side" id="side" aria-label="Шкалы">
+    <aside class="side" id="side" aria-labelledby="sideTitle" tabindex="-1">
       <div class="side-top">
-        <div class="side-head"><b>Шкалы</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть шкалы">✕</button></div>
-        <div class="view-switch" role="group" aria-label="Вид шкал">
+        <h2 id="sideTitle">Профиль</h2>
+        <div class="view-switch" role="group" aria-label="Вид профиля">
           <button type="button" data-view="table" aria-pressed="false">Таблица</button>
           <button type="button" data-view="bars" aria-pressed="false">Шкалы</button>
           <button type="button" data-view="chart" aria-pressed="false">График</button>
         </div>
+        <button type="button" class="side-close" id="sideClose" aria-label="Закрыть профиль">${ICON.close}</button>
       </div>
+      <p class="side-empty">Профиль появится после первого ответа.</p>
       <div class="chart-wrap" id="chartWrap">
         <div class="bars" id="bars"></div>
         <svg id="chart" viewBox="0 0 600 290" role="img" aria-label="Профиль Т-баллов"></svg>
@@ -57,14 +69,14 @@ export function layoutHtml(ctx: AppContext, dk: boolean, n: number): string {
       <div class="table-wrap" id="tableWrap">
         <table class="scores" id="scoreTable">
           <thead>
-            <tr><th class="num">Т-баллы</th><th class="num">Сырые</th><th>Шкалы</th><th class="num" title="Изменение Т после последнего ответа">Δ Т</th></tr>
+            <tr><th class="num">Т</th><th class="num">Сырые</th><th>Шкала</th><th class="num" title="Сдвиг Т после последнего ответа">Δ Т</th></tr>
           </thead>
           <tbody id="scoreBody"></tbody>
         </table>
       </div>
-      <p class="side-note">Тренажёр для изучения методики. Профиль здесь не психологическое заключение и не диагноз.</p>
+      <p class="side-note">Это тренажёр. Профиль здесь не заключение психолога и не диагноз.</p>
     </aside>
   </div>
 
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">Шкалы и профиль</button>`;
+  <button type="button" class="side-open" id="sideOpen" aria-controls="side">Профиль и шкалы${ICON.chevronUp}</button>`;
 }

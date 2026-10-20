@@ -31,12 +31,26 @@ const SHOTS = process.env.E2E_SHOTS;
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
 let VP = "";
+/** Ширина текущего экрана: если страница шире, телефон уменьшит её целиком (innerWidth вырастет вместе с ней). */
+let VPW = 0;
 const issues = [];
 let passed = 0;
 const check = (cond, msg) => { if (cond) passed++; else { issues.push(`[${VP}] ${msg}`); console.log("  ✗", msg); } return cond; };
 async function click(target, label) {
   const err = await b.click(target);
   return check(err === null, `${label}${err ? ": " + err : ""}`);
+}
+/**
+ * Кнопка шапки. На телефоне кнопки лежат в меню «⋯», а тесты — в списке под названием теста: сначала
+ * открыть меню, после нажатия закрыть (keepOpen — оставить открытым, чтобы проверить то, что внутри).
+ */
+async function headClick(sel, label, keepOpen = false) {
+  const opener = await b.js(`const el = document.querySelector(${JSON.stringify(sel)}); const pop = el && el.closest("[popover]");
+    if (!pop || pop.matches(":popover-open")) return null; return pop.id === "testList" ? "#testPick" : "#moreBtn";`);
+  if (opener && !(await click(opener, `${label}: открыть меню`))) return false;
+  const ok = await click(sel, label);
+  if (!keepOpen) await b.js(`document.querySelectorAll(":popover-open").forEach((p) => p.hidePopover());`);
+  return ok;
 }
 async function open(hash, theme = "dark") {
   await b.goto(site.url + "#" + hash, ".panel-head");
@@ -85,6 +99,7 @@ async function layoutChecks(where) {
     }
     const off = items.filter(e => e.getBoundingClientRect().right > w + 1 && !e.classList.contains("test-switch")).map(e => e.id || e.className);
     return { sw: document.documentElement.scrollWidth, w, over, off };`);
+  check(r.w <= VPW, `${where}: страница не шире экрана, телефону не нужно её уменьшать (${r.w} ≤ ${VPW})`);
   check(r.sw <= r.w, `${where}: нет горизонтальной прокрутки (${r.sw} ≤ ${r.w})`);
   check(r.over.length === 0, `${where}: элементы шапки не перекрываются ${r.over.join("; ")}`);
   check(r.off.length === 0, `${where}: кнопки шапки в пределах экрана ${r.off.join(", ")}`);
@@ -93,7 +108,7 @@ async function layoutChecks(where) {
 async function switching() {
   await open("smol");
   for (const t of ["smil", "mmil", "luscher8", "luscher", "smol"]) {
-    await click(`.test-switch button[data-test="${t}"]`, `переключатель: ${t}`);
+    await headClick(`.test-switch button[data-test="${t}"]`, `переключатель: ${t}`);
     // Адрес меняется сразу, а экран — когда загрузится код теста: ждём, пока отметится новый тест.
     for (let i = 0; i < 30 && !(await b.js(`return location.hash === "#${t}" && document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`)); i++) await sleep(100);
     check(await b.js(`return document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`), `переключатель открывает ${t}`);
@@ -127,7 +142,7 @@ async function questionnaire(id, total, { dk = true } = {}) {
   await open(id);
   await layoutChecks(`${id} старт`);
   check((await count('#questions button[data-a="?"]')) > 0 === dk, `${id}: кнопка «Не знаю» ${dk ? "есть" : "отсутствует"}`);
-  await click("#keyBtn", `${id}: «Показать ключ»`);
+  await headClick("#keyBtn", `${id}: «Показать ключ»`);
   check(await b.js(`return document.getElementById("keyBtn").getAttribute("aria-pressed") === "true" && !document.querySelector("#q-1 .q-key").hidden;`), `${id}: ключ показывается`);
 
   // Первые 8 ответов — мышью по подсвеченной кнопке, дальше клавишами (ответ + переход к следующему).
@@ -156,15 +171,8 @@ async function questionnaire(id, total, { dk = true } = {}) {
 
   const wide = await b.js(`return matchMedia("(min-width: 1001px)").matches;`);
   const stripShown = () => b.js(`return document.getElementById("strip").offsetParent !== null;`);
-  if (wide) {
-    // Строка шкал дублирует профиль справа — видна, только когда профиль закрыт.
-    check(!(await stripShown()), `${id}: строка шкал скрыта, пока профиль открыт справа`);
-    await b.js(`window.scrollTo(0, 0);`);
-    await click("#toggleProfile", `${id}: закрыть профиль справа`);
-    check(await stripShown(), `${id}: без профиля строка шкал видна`);
-  } else {
-    check(await stripShown(), `${id}: на узком экране строка шкал видна`);
-  }
+  // Шкалы в шапке видны всегда, и рядом с профилем справа тоже.
+  check(await stripShown(), `${id}: строка шкал видна`);
 
   if ((await count("#strip [data-more]")) > 0) {
     const before = await count("#strip .sc");
@@ -175,7 +183,10 @@ async function questionnaire(id, total, { dk = true } = {}) {
   }
 
   if (wide) {
+    // Кнопка «Шкалы» прячет и показывает профиль справа.
     await b.js(`window.scrollTo(0, 0);`);
+    await click("#toggleProfile", `${id}: закрыть профиль справа`);
+    check(await b.js(`return document.getElementById("side").offsetParent === null;`), `${id}: профиль справа закрывается`);
     await click("#toggleProfile", `${id}: открыть профиль справа`);
   }
   if (!wide) {
@@ -213,31 +224,31 @@ async function questionnaire(id, total, { dk = true } = {}) {
   check(await b.js(`return !!document.querySelector("#q-5 button.on") && document.getElementById("doneCount").textContent === "${total}";`), `${id}: «Вернуть» восстанавливает ответ`);
 
   await b.js(`window.scrollTo(0, 0);`);
-  await click("#validitySum", `${id}: плашка достоверности`);
+  await headClick("#validitySum", `${id}: плашка достоверности`, true);
   await sleep(150);
   const vb = await b.js(`const r = document.getElementById("validityBody").getBoundingClientRect(); return { open: document.getElementById("validity").open, l: r.left, r: r.right, w: innerWidth };`);
   check(vb.open && vb.l >= -1 && vb.r <= vb.w + 1, `${id}: пояснение достоверности в пределах экрана`);
   await b.key("Escape");
 
   const t0 = await b.js(`return document.documentElement.dataset.theme;`);
-  await click("#themeBtn", `${id}: кнопка темы`);
+  await headClick("#themeBtn", `${id}: кнопка темы`);
   const t1 = await b.js(`return document.documentElement.dataset.theme;`);
   check(t0 !== t1, `${id}: тема переключается`);
   await layoutChecks(`${id} ${t1}`);
   if (SHOTS) await b.screenshot(path.join(SHOTS, `${VP}-${id}.png`.replace(/[^\w.-]+/g, "_")));
-  await click("#themeBtn", `${id}: тема обратно`);
+  await headClick("#themeBtn", `${id}: тема обратно`);
 
   const saved = await count("#sheetGrid .cell:not(.st-empty)");
   await b.goto(site.url + "?r=" + Math.random() + "#" + id, "#sheetGrid .cell");
   await idle(`${id}: после перезагрузки`);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === saved, `${id}: ответы сохраняются после перезагрузки`);
   check(await b.js(`return document.querySelectorAll("#strip .sc, #scoreBody tr").length >= 5 && !/Загружаю/.test(document.getElementById("impact").textContent);`), `${id}: после перезагрузки профиль пришёл с сервера`);
-  await click("#resetBtn", `${id}: «Сбросить»`);
+  await headClick("#resetBtn", `${id}: «Сбросить»`);
   await sleep(200);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === 0, `${id}: «Сбросить» очищает ответы`);
   await click(".snack-act", `${id}: «Вернуть» после сброса`);
   check((await count("#sheetGrid .cell:not(.st-empty)")) === saved, `${id}: «Вернуть» восстанавливает все ответы`);
-  await click("#resetBtn", `${id}: «Сбросить» ещё раз`);
+  await headClick("#resetBtn", `${id}: «Сбросить» ещё раз`);
 }
 
 async function luscher(id) {
@@ -248,7 +259,7 @@ async function luscher(id) {
   check(await b.js(`return document.getElementById("luGuide").open;`), `${id}: блок логики раскрывается`);
   await layoutChecks(`${id} с логикой`);
   await click("#luGuide > summary", `${id}: свернуть блок логики`);
-  await click("#keyBtn", `${id}: «Показать ключ»`);
+  await headClick("#keyBtn", `${id}: «Показать ключ»`);
 
   // Цифра выбирает карточку по месту в ряду.
   const before = await count(".lu-stage [data-v]");
@@ -280,13 +291,14 @@ async function luscher(id) {
   await b.js(`window.scrollTo(0, 0);`);
   await click("#undoBtn", `${id}: «← Назад»`);
   check(await b.js(`return !document.querySelector(".lu-done") && !!document.querySelector(".lu-stage [data-v], .lu-stage [data-go]");`), `${id}: «Назад» отменяет последний выбор`);
-  await click("#resetBtn", `${id}: «Сбросить»`);
+  await headClick("#resetBtn", `${id}: «Сбросить»`);
   await idle(`${id}: расчёт после сброса`);
   check(await b.js(`return !document.querySelector(".lu-score-head") && /Шаг 1 из/.test(document.querySelector(".lu-stage").innerText);`), `${id}: «Сбросить» начинает заново`);
 }
 
 for (const [name, w, h, mobile] of VIEWPORTS) {
   VP = name;
+  VPW = w;
   console.log("==", name);
   await b.viewport(w, h, mobile);
   try {

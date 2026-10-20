@@ -12,7 +12,7 @@ export function testSwitchHtml(ctx: AppContext): string {
       `<b>${escapeHtml(t.title)}</b><small>${escapeHtml(t.subtitle)}</small></button>`
   );
   // Это переходы между тестами, а не вкладки: открытый тест отмечен aria-current.
-  return `<nav class="test-switch" aria-label="Тесты">\n  ${buttons.join("\n  ")}\n</nav>`;
+  return `<nav class="test-switch" id="testList" aria-label="Тесты">\n  ${buttons.join("\n  ")}\n</nav>`;
 }
 
 /** Подсветить открытый тест. */

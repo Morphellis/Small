@@ -4,7 +4,8 @@
  * Шаги ведёт браузер, показатели считает сервер: результат обновляется, когда придёт расчёт (createSync).
  */
 import { api, createSync } from "../../../app/api";
-import { bindHeader, buttonHtml, headerHtml, keyButton, setPressed } from "../../../app/header";
+import { bindHeader, buttonHtml, headerHtml, keyButton, pinPanel, setPressed } from "../../../app/header";
+import { ICON } from "../../../app/icons";
 import { byId } from "../../../app/html";
 import { createScope } from "../../../app/scope";
 import { createSnack } from "../../../app/snack";
@@ -24,10 +25,9 @@ const GUIDE_KEY = "luscher-guide";
 function layoutHtml(ctx: AppContext): string {
   const header = headerHtml(ctx, {
     cls: "lu-panel",
-    actions: [
-      buttonHtml(keyButton()),
-      buttonHtml({ id: "undoBtn", label: "← Назад", short: "←", cls: "btn-ghost", title: "Отменить последний выбор (Backspace)" })
-    ],
+    actions: [buttonHtml(keyButton())],
+    // «Назад» нужен на каждом шаге — на телефоне он остаётся в строке, а не уходит в меню.
+    bar: [buttonHtml({ id: "undoBtn", label: "Назад", short: "Назад", icon: ICON.back, cls: "btn-ghost", title: "Отменить последний выбор (Backspace)" })],
     resetTitle: "Начать заново",
     below: `<div class="lu-progress" id="luProgress"></div>`
   });
@@ -73,7 +73,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     onBusy: (busy) => resultsEl.setAttribute("aria-busy", String(busy)),
     onError() {
       resultsEl.querySelector(".lu-offline")?.remove();
-      resultsEl.insertAdjacentHTML("afterbegin", `<p class="lu-offline">Нет связи с сервером — результат пересчитается, как только она появится. Выборы сохранены.</p>`);
+      resultsEl.insertAdjacentHTML("afterbegin", `<p class="lu-offline">Нет связи с сервером. Выборы сохранены, результат досчитается, когда связь вернётся.</p>`);
     }
   });
 
@@ -170,6 +170,13 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
       }
     }
   });
+
+  // На телефоне и планшете строка с переключателем тестов уезжает вверх, прогресс остаётся.
+  const NARROW = window.matchMedia("(max-width: 1000px)");
+  const panel = root.querySelector<HTMLElement>(".panel")!;
+  const pin = () => pinPanel(panel, NARROW.matches);
+  scope.observeResize(panel, pin);
+  scope.on(NARROW, "change", pin);
 
   render();
   scoring.request();
