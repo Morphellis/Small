@@ -126,6 +126,8 @@ test("код сайта (src/) не импортирует серверный (s
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p);
+      // localApi.ts — только для показа на GitHub Pages (ветка pages-demo): там сервера нет, считает браузер.
+      else if (e.name === "localApi.ts") continue;
       else if (/\.ts$/.test(e.name) && /from\s+["'][^"']*\/server\//.test(fs.readFileSync(p, "utf8"))) bad.push(p);
     }
   };

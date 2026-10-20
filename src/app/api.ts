@@ -10,6 +10,11 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, init: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+  // Ветка pages-demo: сервера нет, считаем в браузере (код подсчёта грузится отдельным файлом при первом запросе).
+  if (import.meta.env.VITE_LOCAL_API) {
+    const { localApi } = await import("./localApi");
+    return localApi(path, init.body) as T;
+  }
   const res = await fetch(new URL(path, document.baseURI), {
     method: init.body === undefined ? "GET" : "POST",
     headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
