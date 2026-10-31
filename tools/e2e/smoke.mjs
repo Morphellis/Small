@@ -94,7 +94,7 @@ async function switching() {
   await open("smol");
   for (const t of ["smil", "mmil", "luscher8", "luscher", "smol"]) {
     await click(`.test-switch button[data-test="${t}"]`, `переключатель: ${t}`);
-    for (let i = 0; i < 30 && !(await b.js(`return location.hash === "#${t}" && !!document.querySelector("#keyBtn");`)); i++) await sleep(100);
+    for (let i = 0; i < 30 && !(await b.js(`return location.hash === "#${t}" && document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`)); i++) await sleep(100);
     check(await b.js(`return document.querySelector(".test-switch button.on")?.dataset.test === "${t}";`), `переключатель открывает ${t}`);
   }
 }

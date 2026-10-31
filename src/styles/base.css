@@ -20,7 +20,7 @@
   --yes: #3b6fe0;
   --no: #c2410c;
   --dk: #6b7280;
-  --key: #1f9d52;
+  --key: #147a3a;
   --key-bg: #e7f8ee;
   --high: #c2410c;
   --low: #1d6fb8;
@@ -57,9 +57,9 @@
   --clin: #f0b429;
   --hl: #ff7a6e;
   --hl-bg: rgba(255, 122, 110, 0.16);
-  --yes: #5c93f2;
-  --no: #ea6a2a;
-  --dk: #8a93a1;
+  --yes: #3568c0;
+  --no: #b84a13;
+  --dk: #636d7b;
   --key: #3ecb76;
   --key-bg: rgba(62, 203, 118, 0.16);
   --high: #ff8a4c;
@@ -222,8 +222,9 @@ kbd {
   .test-switch button { min-height: 36px; align-items: center; padding: 5px 12px; }
   .test-switch button b { font-size: 14px; letter-spacing: 0.02em; }
   /* переключатель тестов — отдельной строкой во всю ширину, кнопки ниже; тестов много — строка листается вбок */
-  .test-switch { flex: 1 0 100%; overflow-x: auto; scrollbar-width: none; }
-  .test-switch::-webkit-scrollbar { display: none; }
+  .test-switch { flex: 1 0 100%; overflow-x: auto; scrollbar-width: thin; }
+  .test-switch::-webkit-scrollbar { height: 5px; }
+  .test-switch::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
   .test-switch button { flex: 1 0 auto; justify-content: center; }
   .test-switch { max-width: 100%; }
 }
@@ -250,4 +251,28 @@ kbd {
   .panel-head { padding: 4px 0 3px; }
   .btn .long { display: none; }
   .btn .short { display: inline; }
+}
+
+/* Действия переносятся вместе, а не разрываются на случайные строки. */
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.btn-shortcuts { min-width: 38px; padding-inline: 7px; }
+.router-notice { position: fixed; z-index: 100; inset: auto 12px 12px; max-width: 680px; margin-inline: auto; padding: 16px; border: 1px solid var(--hl); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sheet); }
+.router-notice p { margin: 0 0 10px; }
+.router-notice button { margin-right: 8px; }
+@media (max-width: 640px) {
+  .header-actions { gap: 3px; flex-wrap: nowrap; }
+  .header-actions .btn-key { padding-inline: 5px; }
+  .header-actions .btn-shortcuts { min-width: 30px; padding-inline: 4px; }
+}
+
+.progress-transfer { margin: 0 auto 14px; max-width: 600px; text-align: left; }
+.progress-transfer summary { cursor: pointer; padding: 10px 0; }
+.progress-transfer p { margin: 8px 0; }
+.progress-transfer .btn { display: inline-block; min-height: 44px; margin: 0 6px 6px 0; }
+.progress-transfer input { display: block; width: 100%; margin-block: 4px; }
+
+.test-switch.can-scroll::after {
+  content: "↔"; position: sticky; right: 0; display: flex; align-items: center; justify-content: center;
+  flex: 0 0 24px; background: var(--surface-2); color: var(--muted); pointer-events: none;
+  box-shadow: -5px 0 8px var(--surface-2);
 }

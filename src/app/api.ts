@@ -58,7 +58,7 @@ export function createSync<T>(scope: Scope, opts: {
       if (scope.signal.aborted) return;
       doneVersion = v;
       delay = 1000;
-      opts.onResult(result);
+      if (v === version) opts.onResult(result); // устаревший ответ не относится к текущему экрану
     } catch (e) {
       if (scope.signal.aborted) return;
       opts.onError?.(e);

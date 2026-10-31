@@ -16,13 +16,18 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
       buttonHtml({ id: "toggleProfile", label: "Шкалы", cls: "btn-ghost", pressed: true })
     ],
     // Что изменил последний ответ и все шкалы одной полоской — всегда перед глазами.
-    below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip"></div>`
+    below: `<div class="impact" id="impact" aria-live="polite"></div>\n      <div class="strip" id="strip" tabindex="0" aria-label="Шкалы, прокручиваются горизонтально"></div>`
   });
 
   return `${header}
 
   <div class="wrap layout" id="layout">
-    <main class="main">
+    <main class="main" id="testContent" role="tabpanel" aria-labelledby="test-tab-${ctx.currentId}">
+      <div class="question-progress" aria-label="Прогресс опросника">
+        <span id="progressText" role="status"></span>
+        <button type="button" class="btn" id="nextUnanswered">К пропущенному</button>
+        <progress id="questionProgress" value="0" max="1" aria-label="Количество ответов"></progress>
+      </div>
       <p class="keys-hint">Клавиши: <kbd>1</kbd> Да · <kbd>2</kbd> Нет · ${dk ? "<kbd>3</kbd> Не знаю · " : ""}<kbd>0</kbd> снять ответ · <kbd>↑</kbd><kbd>↓</kbd> другой вопрос</p>
       <ol class="questions" id="questions"></ol>
 
@@ -44,16 +49,16 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
       <div class="side-top">
         <div class="side-head"><b>Шкалы</b><button type="button" class="side-close" id="sideClose" aria-label="Закрыть шкалы">✕</button></div>
         <div class="view-switch" role="tablist" aria-label="Вид шкал">
-          <button type="button" role="tab" data-view="table">Таблица</button>
-          <button type="button" role="tab" data-view="bars">Шкалы</button>
-          <button type="button" role="tab" data-view="chart">График</button>
+          <button type="button" role="tab" id="view-table" aria-controls="tableWrap" data-view="table">Таблица</button>
+          <button type="button" role="tab" id="view-bars" aria-controls="chartWrap" data-view="bars">Шкалы</button>
+          <button type="button" role="tab" id="view-chart" aria-controls="chartWrap" data-view="chart">График</button>
         </div>
       </div>
-      <div class="chart-wrap" id="chartWrap">
+      <div class="chart-wrap" id="chartWrap" role="tabpanel" aria-labelledby="view-chart">
         <div class="bars" id="bars"></div>
         <svg id="chart" viewBox="0 0 600 290" role="img" aria-label="Профиль Т-баллов"></svg>
       </div>
-      <div class="table-wrap" id="tableWrap">
+      <div class="table-wrap" id="tableWrap" role="tabpanel" aria-labelledby="view-table">
         <table class="scores" id="scoreTable">
           <thead>
             <tr><th class="num">Т-баллы</th><th class="num">Сырые</th><th>Шкалы</th><th class="num" title="Изменение Т после последнего ответа">Δ Т</th></tr>

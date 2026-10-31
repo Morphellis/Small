@@ -13,7 +13,7 @@ import { noScoreText } from "./questions";
  */
 export function renderImpact(v: ViewCtx, box: HTMLElement, last: LastAnswer | null, answer: MaybeAnswer): void {
   if (!last) {
-    box.className = "impact";
+    box.className = "impact is-empty";
     box.innerHTML = `<span class="impact-empty">Отметьте ответ: здесь покажется, какие шкалы он изменил и насколько.</span>`;
     return;
   }
@@ -77,13 +77,16 @@ export interface ValidityEls {
 export function renderValidity(v: ViewCtx, els: ValidityEls, profile: Profile): void {
   const { valid, checks } = profile.validity;
   const unit = (c: { unit: string }) => (c.unit ? " " + c.unit : "");
+  const incomplete = profile.answered < v.n;
+  els.root.classList.toggle("pending", incomplete && valid);
   els.root.classList.toggle("bad", !valid);
   if (valid) {
     // По сырым баллам: «L 2 из 4»; по Т-баллам: «L 49 Т, до 70».
     const counts = checks.map((c) => (c.unit ? `${c.scale} ${c.value}${unit(c)}, до ${c.limit}` : `${c.scale} ${c.value} из ${c.limit}`)).join(" · ");
-    els.summary.innerHTML = `<b>✓<span class="vt"> Достоверен</span></b><span class="v-counts">${counts}</span>`;
-    els.body.innerHTML = `<p>${v.def.validityRule} Сейчас ${checks.length > 2 ? "все" : "оба"} в пределах.</p>`;
-    els.root.open = false;
+    els.summary.innerHTML = incomplete
+      ? `<b>…<span class="vt"> Предварительно</span></b><span class="v-counts">${profile.answered} из ${v.n}</span>`
+      : `<b>✓<span class="vt"> Достоверен</span></b><span class="v-counts">${counts}</span>`;
+    els.body.innerHTML = `<p>${incomplete ? "Опросник ещё не завершён. Контрольные пороги пока не превышены; профиль предварительный. " : ""}${v.def.validityRule} Сейчас ${checks.length > 2 ? "все" : "оба"} в пределах.</p>`;
     return;
   }
   const bad = checks.filter((c) => c.exceeded);

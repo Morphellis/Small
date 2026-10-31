@@ -77,6 +77,13 @@ describe("модель прохождения", () => {
     expect(loadSaved("full", null)).toEqual(emptySession());
   });
 
+  test("сохранение обрывается на первом недопустимом выборе и не склеивает журнал через мусор", () => {
+    const log = [{ step: "rank1", value: 0 }, { step: "rank1", value: 1 }];
+    expect(replayValid("short", [...log, { step: "rank1", value: 0 }])).toEqual(log);
+    expect(loadSaved("short", { log: [log[0], null, log[1]] }).log).toEqual([log[0]]);
+    expect(loadSaved("full", { log: [{ step: "achromatic", value: 5 }] }).log).toEqual([]);
+  });
+
   test("раскладка карточек запоминается и переживает сохранение", () => {
     const s = emptySession();
     const step = derive("short", []).step!;

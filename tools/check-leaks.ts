@@ -2,7 +2,7 @@
  * Проверка после сборки: в файлы для браузера (dist) не попало ничего из того, что должно жить только
  * на сервере. Нашлось — сборка падает.
  *
- *   vite-node tools/check-leaks.ts [папка]      (по умолчанию dist; запускается из npm run build)
+ *   tsx tools/check-leaks.ts [папка]      (по умолчанию dist; запускается из npm run build)
  */
 import fs from "node:fs";
 import path from "node:path";

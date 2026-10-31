@@ -14,6 +14,7 @@ import { decodeAnswers } from "../src/kinds/questionnaire/answers";
 import type { KeysResponse, ScoreResponse } from "../src/kinds/questionnaire/types";
 import type { Pick, Variant } from "../src/kinds/luscher/flow";
 import type { LuscherResult } from "../src/kinds/luscher/types";
+import { replayValid } from "../src/kinds/luscher/model";
 import { scoreLuscher } from "./luscher/score";
 import { computeProfile, publicKeys } from "./questionnaire/engine";
 import { LUSCHER_VARIANTS, QUESTIONNAIRES } from "./registry";
@@ -100,7 +101,11 @@ async function route(req: IncomingMessage, path: string): Promise<{ status: numb
       const json = await readJson(req);
       const answers = decodeAnswers(def, (json as { answers?: unknown } | null)?.answers);
       if (!answers) throw new HttpError(400, "ответы не подходят к тесту");
-      const body: ScoreResponse = { profile: computeProfile(def, answers) };
+      const previous = (json as { beforeAnswers?: unknown }).beforeAnswers;
+      const before = previous === undefined ? undefined : decodeAnswers(def, previous);
+      if (before === null) throw new HttpError(400, "предыдущие ответы не подходят к тесту");
+      const body: ScoreResponse = { profile: computeProfile(def, answers),
+        ...(before ? { beforeProfile: computeProfile(def, before) } : {}) };
       return { status: 200, body };
     }
   }
@@ -113,6 +118,7 @@ async function route(req: IncomingMessage, path: string): Promise<{ status: numb
     const json = await readJson(req);
     const log = (json as { log?: unknown } | null)?.log;
     if (!Array.isArray(log) || log.length > MAX_LOG || !log.every(isPick)) throw new HttpError(400, "журнал выборов не подходит");
+    if (replayValid(variant, log).length !== log.length) throw new HttpError(400, "недопустимый выбор в журнале");
     const body: LuscherResult = scoreLuscher(variant, log);
     return { status: 200, body };
   }

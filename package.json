@@ -8,21 +8,24 @@
   "description": "Тренажёр психологических тестов (СМОЛ, СМИЛ, ММИЛ, Люшер): сайт на Vite + TypeScript, подсчёт на сервере (Node.js)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --config vite.server.config.ts && vite-node tools/check-leaks.ts",
+    "build": "tsc --noEmit && vite build && vite build --config vite.server.config.ts && tsx tools/check-leaks.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "new-test": "node tools/new-test.mjs",
-    "fixture": "vite-node tools/make-fixture.ts --",
+    "fixture": "tsx tools/make-fixture.ts --",
     "e2e": "node tools/e2e/smoke.mjs",
     "perf": "node tools/e2e/perf.mjs",
     "start": "node dist-server/main.mjs",
-    "preview": "npm run build && npm start"
+    "preview": "npm run build && npm start",
+    "test:browser": "npm run build && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vite": "^7.3.6",
-    "vitest": "^3.2.7"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

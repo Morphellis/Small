@@ -2,6 +2,7 @@
  * Шапка любого теста: переключатель тестов, свои кнопки теста, тема и «Сбросить». Одинаковая разметка
  * и одинаковые id кнопок (keyBtn, themeBtn, resetBtn) у всех видов тестов — новый тест получает шапку одной строкой.
  */
+import { bindShortcuts } from "./shortcuts";
 import { escapeHtml } from "./html";
 import type { Scope } from "./scope";
 import { bindTestSwitch, testSwitchHtml } from "./testSwitch";
@@ -53,9 +54,12 @@ export function headerHtml(ctx: AppContext, o: HeaderOptions = {}): string {
         ${testSwitchHtml(ctx)}
         ${o.afterSwitch ?? ""}
         <span class="spacer"></span>
+        <div class="header-actions">
         ${(o.actions ?? []).join("\n        ")}
+        <button type="button" class="btn btn-shortcuts" id="shortcutsBtn" aria-label="Горячие клавиши" aria-pressed="true">⌨</button>
         <button type="button" class="btn btn-theme" id="themeBtn" aria-label="Переключить тему"></button>
         ${buttonHtml({ id: "resetBtn", label: "Сбросить", short: "↺", cls: "btn-reset", title: o.resetTitle ?? "Сбросить результаты" })}
+        </div>
       </div>
       ${o.below ?? ""}
     </div>
@@ -65,6 +69,7 @@ export function headerHtml(ctx: AppContext, o: HeaderOptions = {}): string {
 /** Оживить общую часть шапки: переключатель тестов и кнопку темы. */
 export function bindHeader(root: ParentNode, ctx: AppContext, scope: Scope): void {
   bindTestSwitch(root, ctx, scope.signal);
+  bindShortcuts(root.querySelector<HTMLElement>("#shortcutsBtn")!, scope.signal);
   bindThemeButton(root.querySelector<HTMLElement>("#themeBtn")!, scope.signal);
 }
 

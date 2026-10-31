@@ -7,6 +7,8 @@
  * при переходе на другой тест.
  */
 import { api, createSync } from "../../../app/api";
+import { shortcutsEnabled, isTyping } from "../../../app/shortcuts";
+import { bindTabs } from "../../../app/tabs";
 import { byId } from "../../../app/html";
 import { setPressed, bindHeader } from "../../../app/header";
 import { reducedMotion, tween } from "../../../app/motion";
@@ -55,7 +57,8 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   const validity: ValidityEls = { root: byId<HTMLDetailsElement>(root, "validity"), summary: byId(root, "validitySum"), body: byId(root, "validityBody") };
 
   // ---------- состояние ----------
-  const loaded = loadSaved(def, readJson<Saved>(def.storageKey), WIDE.matches);
+  const saved = readJson<Saved>(def.storageKey);
+  const loaded = loadSaved(def, saved, WIDE.matches);
   let session = loaded.session;
   const prefs = loaded.prefs;
   /** Последний расчёт сервера; null — ещё не пришёл. */
@@ -64,13 +67,17 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   let last: LastAnswer | null = null;
   /** На какой вопрос ответили последним — подсвечивается сразу, не дожидаясь сервера. */
   let lastQ: number | null = null;
-  let cur = 0;
+  let cur = Number.isInteger(saved?.currentQuestion) ? Math.max(0, Math.min(v.n - 1, saved!.currentQuestion!))
+    : Math.max(0, session.answers.findIndex((a) => a === null));
+  let lastChange: { q: number; beforeAnswers: string } | null = null;
   /** Перешли к следующему вопросу клавишей — после расчёта проверить, что он не ушёл под выросшую шапку. */
   let followCur = false;
+  let restoreCur = !!saved && cur > 0 && session.answers.some((a) => a !== null);
 
-  const saver = createSaver(def.storageKey, () => toSaved(session, prefs, WIDE.matches));
+  const saver = createSaver(def.storageKey, () => ({ ...toSaved(session, prefs, WIDE.matches), currentQuestion: cur }));
   scope.add(saver.flush);
   scope.on(window, "pagehide", saver.flush);
+  scope.on(window, "trainer:save", saver.flush);
 
   const questionEl = (i: number) => el.questions.children[i] as HTMLElement;
   const sheetCell = (i: number) => el.sheetGrid.children[i] as HTMLElement;
@@ -141,8 +148,26 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     drawn[view] = version;
   }
 
+  function renderProgress() {
+    const answered = session.answers.filter((a) => a !== null).length;
+    byId(root, "progressText").textContent = `Ответили ${answered} из ${v.n}`;
+    const progress = byId<HTMLProgressElement>(root, "questionProgress");
+    progress.max = v.n;
+    progress.value = answered;
+    byId<HTMLButtonElement>(root, "nextUnanswered").disabled = answered === v.n;
+  }
+
   function renderScores() {
     if (!profile) {
+      stopTween();
+      chartT = null;
+      el.chart.replaceChildren();
+      el.bars.replaceChildren();
+      el.scoreBody.replaceChildren();
+      el.strip.replaceChildren();
+      validity.root.className = "validity pending";
+      validity.summary.textContent = "… Расчёт";
+      validity.body.textContent = "Ожидаем расчёт текущих ответов.";
       el.impact.className = "impact";
       el.impact.innerHTML = `<span class="impact-empty">Загружаю баллы…</span>`;
       return;
@@ -157,12 +182,13 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   function renderLayout() {
     el.layout.classList.toggle("no-side", !prefs.showProfile);
     el.sideOpen.hidden = prefs.showProfile;
-    // Строка шкал в шапке дублирует профиль — нужна, только когда его колонки не видно (закрыта или на узком экране шторка).
-    el.strip.hidden = WIDE.matches && prefs.showProfile;
+    // Открытый профиль уже показывает шкалы; на телефоне не дублируем их в шапке.
+    el.strip.hidden = prefs.showProfile;
     setPressed(el.toggleProfile, prefs.showProfile);
     el.toggleProfile.setAttribute("aria-expanded", String(prefs.showProfile));
     const view = prefs.profileView;
     el.chartWrap.hidden = view === "table";
+    el.chartWrap.setAttribute("aria-labelledby", "view-" + view);
     el.tableWrap.hidden = view !== "table";
     el.bars.hidden = view !== "bars";
     el.chart.style.display = view === "chart" ? "" : "none";
@@ -170,6 +196,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
       const on = b.dataset.view === view;
       b.classList.toggle("on", on);
       b.setAttribute("aria-selected", String(on));
+      b.tabIndex = on ? 0 : -1;
     }
     setPressed(el.keyBtn, prefs.keyMode);
     document.body.classList.toggle("keymode", prefs.keyMode);
@@ -181,6 +208,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
 
   function renderAll() {
     for (let i = 0; i < v.n; i++) renderRow(i);
+    renderProgress();
     renderScores();
     renderLayout();
   }
@@ -189,14 +217,22 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   function setAnswer(i: number, value: Answer, advance: boolean) {
     const prevLast = lastQ;
     const prevCur = cur;
+    lastChange = { q: i, beforeAnswers: encodeAnswers(session.answers) };
     applyAnswer(session, i, value);
+    last = null;
+    el.impact.className = "impact";
+    el.impact.textContent = "Пересчитываю влияние ответа…";
+    renderProgress();
     lastQ = i;
     cur = advance && session.answers[i] !== null && i < v.n - 1 ? i + 1 : i;
     for (const q of new Set([i, prevCur, cur, ...(prevLast === null ? [] : [prevLast])])) renderRow(q);
     scoring.request();
     saver.schedule();
     followCur = advance;
-    if (advance) scrollToQuestion(cur);
+    if (advance) {
+      questionEl(cur).querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+      scrollToQuestion(cur);
+    }
   }
 
   function setCur(i: number, scroll: boolean) {
@@ -204,8 +240,11 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     cur = Math.max(0, Math.min(v.n - 1, i));
     renderRow(prev);
     renderRow(cur);
-    if (scroll) scrollToQuestion(cur);
-    else followCur = false; // выбрали вопрос мышью — прокрутку не трогаем
+    saver.schedule();
+    if (scroll) {
+      questionEl(cur).querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+      scrollToQuestion(cur);
+    } else followCur = false; // выбрали вопрос мышью — прокрутку не трогаем
   }
 
   function scrollToQuestion(i: number, flash = false) {
@@ -240,18 +279,25 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     // На узком низком экране слишком высокая панель не прилипает, чтобы не закрывать вопросы.
     const h = el.panel.getBoundingClientRect().height;
     document.documentElement.style.setProperty("--panel-h", h + "px");
-    el.panel.classList.toggle("unstick", NARROW.matches && h > window.innerHeight * 0.45);
+    el.panel.classList.toggle("unstick", NARROW.matches && h > window.innerHeight * (prefs.showProfile ? 0.3 : 0.45));
   }
 
   function setPrefs(change: Partial<typeof prefs>) {
     Object.assign(prefs, change);
     renderLayout();
     saver.schedule();
+    if (change.showProfile === true && NARROW.matches) {
+      el.side.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+    } else if (change.showProfile === false && el.side.contains(document.activeElement)) {
+      el.toggleProfile.focus({ preventScroll: true });
+    }
   }
 
   function resetAll() {
     if (!window.confirm(`Сбросить все ответы и историю ${def.title}?`)) return;
     session = emptySession(def);
+    profile = null;
+    lastChange = null;
     last = null;
     lastQ = null;
     cur = 0;
@@ -272,16 +318,19 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   /** Профиль по текущим ответам. q — вопрос, ответ на который пересчитываем (null — загрузка или сброс). */
   const scoring = createSync(scope, {
     async send(signal) {
-      const q = lastQ;
-      const r = await api<ScoreResponse>(`api/questionnaire/${def.id}/score`, { body: { answers: encodeAnswers(session.answers) }, signal });
-      return { next: r.profile, q };
+      const change = lastChange;
+      const r = await api<ScoreResponse>(`api/questionnaire/${def.id}/score`, {
+        body: { answers: encodeAnswers(session.answers), beforeAnswers: change?.beforeAnswers }, signal
+      });
+      return { next: r.profile, before: r.beforeProfile, q: change?.q ?? null };
     },
-    onResult({ next, q }) {
-      last = profile && q !== null ? lastAnswer(def, q, profile, next, v.focus) : null;
+    onResult({ next, before, q }) {
+      last = before && q !== null ? lastAnswer(def, q, before, next, v.focus) : null;
       profile = next;
       renderScores();
       // Строка «что изменил ответ» в шапке могла стать выше и закрыть вопрос, к которому только что перешли.
-      if (followCur) scrollToQuestion(cur);
+      if (followCur || restoreCur) scrollToQuestion(cur);
+      restoreCur = false;
       followCur = false;
     },
     onBusy: (busy) => el.panel.setAttribute("aria-busy", String(busy)),
@@ -303,6 +352,23 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   });
 
   // ---------- события ----------
+  scope.on(el.questions, "focusin", (e) => {
+    const li = (e.target as Element).closest<HTMLElement>(".q");
+    if (li) {
+      if (NARROW.matches && prefs.showProfile) setPrefs({ showProfile: false });
+      if (Number(li.dataset.i) !== cur) setCur(Number(li.dataset.i), false);
+      if ((e.target as Element).matches(":focus-visible")) scrollToQuestion(cur);
+    }
+  });
+  scope.on(byId(root, "nextUnanswered"), "click", () => {
+    const i = session.answers.findIndex((a) => a === null);
+    if (i < 0) return;
+    setCur(i, false);
+    questionEl(i).querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+    scrollToQuestion(i, true);
+  });
+  bindTabs(root.querySelector<HTMLElement>(".view-switch")!, scope.signal);
+
   scope.on(el.questions, "click", (e) => {
     const t = e.target as Element;
     const li = t.closest<HTMLElement>(".q");
@@ -313,6 +379,9 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     else setCur(i, false);
   });
 
+  scope.on(el.sheetGrid, "focusin", () => {
+    if (NARROW.matches && prefs.showProfile) setPrefs({ showProfile: false });
+  });
   scope.on(el.sheetGrid, "click", (e) => {
     const c = (e.target as Element).closest<HTMLElement>(".cell");
     if (!c) return;
@@ -336,7 +405,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   scope.on(el.sideOpen, "click", () => setPrefs({ showProfile: true }));
   scope.on(byId(root, "sideClose"), "click", () => setPrefs({ showProfile: false }));
   // При смене ширины (поворот телефона, окно) — к умолчанию: справа колонка, на узком экране шторка закрыта.
-  scope.on(WIDE, "change", () => { prefs.showProfile = WIDE.matches; renderLayout(); });
+  scope.on(WIDE, "change", () => setPrefs({ showProfile: WIDE.matches }));
   scope.on(byId(root, "resetBtn"), "click", resetAll);
   scope.on(validity.root, "toggle", () => fitValidityBody(validity));
   // Пояснение к достоверности открывается поверх вопросов — закрываем его кликом мимо.
@@ -349,8 +418,8 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
       else if (!WIDE.matches && prefs.showProfile) setPrefs({ showProfile: false });
       return;
     }
-    const tag = ((e.target as Element).tagName || "").toLowerCase();
-    if (tag === "select" || tag === "textarea" || tag === "input") return;
+    if (!shortcutsEnabled() || e.repeat || e.isComposing || isTyping(e.target)) return;
+    if (el.side.contains(e.target as Node)) return;
     const answer = KEY_ANSWER[e.code];
     if (answer && (answer !== "?" || v.dk)) {
       e.preventDefault();
@@ -382,6 +451,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   renderAll();
   keys.request();
   scoring.request();
+  if (saved && cur > 0 && session.answers.some((a) => a !== null)) scope.timeout(() => scrollToQuestion(cur), 0);
 
   return () => {
     scope.dispose();

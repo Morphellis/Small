@@ -2,7 +2,7 @@
  * Модель прохождения теста Люшера — без DOM (проверяется в tests/luscher.test.ts): журнал выборов,
  * запомненные раскладки карточек, загрузка сохранённого и всё, что из журнала выводится для экрана.
  */
-import { currentStep, picksByStep, rankOrder, shuffledColors, steps, type Pick, type Step, type Variant } from "./flow";
+import { PAIR_LINES, currentStep, picksByStep, rankOrder, shuffledColors, steps, type Pick, type Step, type Variant } from "./flow";
 
 export interface Session {
   log: Pick[];
@@ -21,11 +21,17 @@ export interface Saved {
 export const emptySession = (keyMode = false): Session => ({ log: [], layouts: {}, keyMode });
 
 /** Оставить из журнала только то, что ложится на шаги по порядку (журнал старой версии мог не подойти). */
-export function replayValid(variant: Variant, log: readonly Pick[]): Pick[] {
+export function replayValid(variant: Variant, log: readonly unknown[]): Pick[] {
   const ok: Pick[] = [];
   for (const p of log) {
     const s = currentStep(variant, ok);
-    if (!s || s.id !== p.step) break;
+    if (!s || !isPick(p) || s.id !== p.step) break;
+    const chosen = ok.filter((x) => x.step === s.id).map((x) => x.value);
+    const allowed = s.kind === "pairs" ? PAIR_LINES[chosen.length]
+      : s.kind === "pause" ? [0]
+      : Array.from({ length: s.kind === "rank" ? 8 : s.kind === "achromatic" ? 5 : 7 }, (_, i) => i)
+        .filter((value) => !chosen.includes(value));
+    if (!allowed.includes(p.value)) break;
     ok.push(p);
   }
   return ok;
@@ -41,10 +47,10 @@ export function loadSaved(variant: Variant, saved: Saved | null): Session {
   if (!saved || typeof saved !== "object") return emptySession();
   const layouts: Record<string, number[]> = {};
   if (saved.layouts && typeof saved.layouts === "object") {
-    for (const [k, v] of Object.entries(saved.layouts)) if (isLayout(v)) layouts[k] = v;
+    for (const [k, v] of Object.entries(saved.layouts)) if ((k === "rank1" || k === "rank2") && isLayout(v)) layouts[k] = v;
   }
   return {
-    log: replayValid(variant, Array.isArray(saved.log) ? saved.log.filter(isPick) : []),
+    log: replayValid(variant, Array.isArray(saved.log) ? saved.log : []),
     layouts,
     keyMode: saved.keyMode === true
   };

@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright test
       # Критические сценарии в настоящем Chrome (он уже есть на ubuntu-latest) на телефоне и компьютере.
       - run: npm run e2e
         env:

@@ -425,7 +425,7 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 
 .cell.st-first.a-N { background: var(--no); border-color: var(--no); color: #fff; }
 
-.cell.st-first i, .cell.st-dk i { color: rgba(255, 255, 255, 0.85); }
+.cell.st-first i, .cell.st-dk i { color: #fff; }
 
 .cell.st-changed { border: 2px dashed currentColor; background: var(--surface); }
 
@@ -453,8 +453,8 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
     position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 30;
     /* по содержимому, но не выше места под шапкой: над короткой шторкой (полосы, график) видны вопросы */
     height: auto;
-    max-height: clamp(260px, calc(100vh - var(--panel-h)), 86vh);
-    max-height: clamp(260px, calc(100dvh - var(--panel-h)), 86dvh);
+    max-height: 42vh;
+    max-height: 42dvh;
     margin: 0; padding: 0 14px calc(14px + env(safe-area-inset-bottom));
     border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
     box-shadow: var(--shadow-sheet);
@@ -496,8 +496,9 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
   .imp-q-text { display: none; }
   .imp-chip b { font-size: 15px; }
   /* все шкалы одной прокручиваемой строкой, чтобы панель не съедала экран */
-  .strip { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 4px; padding-bottom: 2px; }
-  .strip::-webkit-scrollbar { display: none; }
+  .strip { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; gap: 4px; padding-bottom: 2px; }
+  .strip::-webkit-scrollbar { height: 5px; }
+  .strip::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
   .strip .sc { flex: 0 0 46px; min-width: 46px; padding: 3px 0 2px; }
   .bar-row { grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 34px; gap: 6px; }
   /* шторка профиля пониже, чтобы над ней оставались видны вопросы: переключатель и ✕ в одну строку, полосы плотнее */
@@ -537,4 +538,21 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 @media (prefers-reduced-motion: reduce) {
   .q.flash { animation: none; }
   .side, .bar-fill { transition: none !important; }
+}
+
+.question-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.question-progress progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.question-progress .btn { margin-left: auto; }
+.validity.pending { border-color: var(--border-strong); background: var(--surface-2); }
+.validity.pending summary b { color: var(--muted); }
+@media (pointer: coarse) {
+  .sheet-grid { grid-template-columns: repeat(auto-fill, 44px); gap: 5px; }
+  .sheet-grid .cell { width: 44px; height: 44px; }
+  .sheet-grid .cell i { font-size: 11px; }
+  .side-close, .view-switch button, .side-open, .more-chip { min-height: 44px; }
+}
+@media (max-width: 640px) {
+  .impact.is-empty { display: none; }
+  .question-progress { font-size: 13px; }
+  .question-progress .btn { min-height: 44px; }
 }

@@ -44,9 +44,9 @@ for (const [name, text] of Object.entries(files)) {
 }
 if (!custom) addToServerRegistry();
 
-const line = `  { id: "${id}", title: ${JSON.stringify(title)}, subtitle: ${JSON.stringify(subtitle)}, hint: ${JSON.stringify(title)}, ` +
+const line = `  { id: "${id}", storageKey: "${id}-trainer-v1", title: ${JSON.stringify(title)}, subtitle: ${JSON.stringify(subtitle)}, hint: ${JSON.stringify(title)}, ` +
   `load: () => import("../tests/${id}").then((m) => m.default) }`;
-const updated = registry.replace(/\n\];\s*$/, `,\n${line}\n];\n`);
+const updated = registry.replace(/\n\](?=\.map\(\(entry\) =>)/, `,\n${line}\n]`);
 if (updated === registry) {
   console.error("Не нашёл конец списка TESTS в registry.ts — добавьте строку вручную:\n" + line);
 } else {

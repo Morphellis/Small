@@ -18,22 +18,61 @@ export function startRouter(root: HTMLElement, tests: readonly TestEntry[]): voi
     return byId(location.hash.slice(1)) ?? byId(readString(LAST_TEST_KEY)) ?? tests[0];
   }
 
-  async function show(entry: TestEntry) {
-    if (current === entry) return;
+  let notice: HTMLElement | null = null;
+  let pending: TestEntry | null = null;
+
+  async function show(entry: TestEntry, retryLoad = false) {
     const ticket = ++loading;
-    current = entry;
-    writeString(LAST_TEST_KEY, entry.id);
-    if (location.hash.slice(1) !== entry.id) history.replaceState(null, "", "#" + entry.id);
-    const module = await entry.load();
-    if (ticket !== loading) return; // пока грузился, выбрали другой тест
-    unmount?.();
-    const ctx: AppContext = { tests, currentId: entry.id, switchTo: (id) => { const t = byId(id); if (t) void show(t); } };
-    unmount = module.mount(root, ctx);
-    performance.mark("mounted:" + entry.id); // для замеров быстродействия (tools/e2e/perf.mjs)
-    // При первом показе браузер сам вернёт прокрутку после перезагрузки; при смене теста — наверх.
-    if (!first) window.scrollTo({ top: 0 });
-    first = false;
+    pending = entry;
+    notice?.remove();
+    notice = null;
+    if (current === entry) {
+      pending = null;
+      history.replaceState(null, "", "#" + entry.id);
+      return;
+    }
+    try {
+      const module = await entry.load(retryLoad);
+      if (ticket !== loading) return;
+      unmount?.();
+      const ctx: AppContext = { tests, currentId: entry.id, switchTo: (id) => { const t = byId(id); if (t) void show(t); } };
+      unmount = module.mount(root, ctx);
+      current = entry;
+      pending = null;
+      writeString(LAST_TEST_KEY, entry.id);
+      history.replaceState(null, "", "#" + entry.id);
+      performance.mark("mounted:" + entry.id);
+      if (!first) {
+        window.scrollTo({ top: 0 });
+        root.querySelector<HTMLElement>(".test-switch .on")?.focus({ preventScroll: true });
+      }
+      first = false;
+    } catch {
+      if (ticket !== loading) return;
+      pending = null;
+      if (current) history.replaceState(null, "", "#" + current.id);
+      notice = document.createElement("section");
+      notice.className = "router-notice";
+      notice.setAttribute("role", "alert");
+      const message = document.createElement("p");
+      message.textContent = `Не удалось открыть ${entry.title}. Проверьте соединение и попробуйте ещё раз.`;
+      const retry = document.createElement("button");
+      retry.className = "btn";
+      retry.textContent = "Повторить";
+      retry.addEventListener("click", () => void show(entry, true));
+      const reload = document.createElement("button");
+      reload.className = "btn";
+      reload.textContent = "Обновить страницу";
+      reload.addEventListener("click", () => { location.hash = entry.id; location.reload(); });
+      notice.append(message, retry, reload);
+      document.body.append(notice);
+      retry.focus({ preventScroll: true });
+    }
   }
+
+  window.addEventListener("online", () => {
+    if (notice && !pending) notice.querySelector<HTMLButtonElement>("button")?.click();
+  });
 
   // Смена #smol / #smil в адресе или переход по такой ссылке на открытой странице.
   window.addEventListener("hashchange", () => {

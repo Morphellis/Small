@@ -5,12 +5,13 @@
  */
 import { api, createSync } from "../../../app/api";
 import { bindHeader, buttonHtml, headerHtml, keyButton, setPressed } from "../../../app/header";
+import { shortcutsEnabled, isTyping } from "../../../app/shortcuts";
 import { byId } from "../../../app/html";
 import { createScope } from "../../../app/scope";
 import { createSaver, readJson, readString, writeString } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
 import { currentStep } from "../flow";
-import { derive, emptySession, layoutFor, loadSaved, toSaved, type Saved } from "../model";
+import { replayValid, derive, emptySession, layoutFor, loadSaved, toSaved, type Saved } from "../model";
 import type { LuscherDef, LuscherResult } from "../types";
 import { guideHtml } from "./guide";
 import { gaugeLeft, moveGauge, play, playUndo, snapshot } from "./motion";
@@ -31,7 +32,7 @@ function layoutHtml(ctx: AppContext): string {
     below: `<div class="lu-progress" id="luProgress"></div>`
   });
   return `${header}
-  <main class="wrap lu-main">
+  <main class="wrap lu-main" id="testContent" role="tabpanel" aria-labelledby="test-tab-${ctx.currentId}">
     <div class="lu-left">
       <details class="lu-guide" id="luGuide"></details>
       <section class="lu-stage" id="luStage" aria-live="polite"></section>
@@ -47,6 +48,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
   const saver = createSaver(def.storageKey, () => toSaved(session));
   scope.add(saver.flush);
   scope.on(window, "pagehide", saver.flush);
+  scope.on(window, "trainer:save", saver.flush);
 
   root.innerHTML = layoutHtml(ctx);
   const stageEl = byId(root, "luStage"), resultsEl = byId(root, "luResults"), progressEl = byId(root, "luProgress");
@@ -90,7 +92,15 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     if (!hadLayout && layout) saver.schedule(); // новая случайная раскладка — запомнить
     setPressed(keyBtn, session.keyMode);
     undoBtn.disabled = session.log.length === 0;
+    const active = document.activeElement;
+    const hadFocus = stageEl.contains(active);
+    const value = (active as HTMLElement | null)?.dataset.v;
     stageEl.innerHTML = stageHtml(def, d, session.keyMode, layout);
+    stageEl.tabIndex = -1;
+    if (hadFocus) {
+      const same = value === undefined ? null : stageEl.querySelector<HTMLElement>(`[data-v="${value}"]`);
+      (same ?? stageEl.querySelector<HTMLElement>("[data-v], [data-go]") ?? stageEl).focus({ preventScroll: true });
+    }
     renderResults();
   }
 
@@ -98,7 +108,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
 
   function choose(value: number) {
     const step = currentStep(V, session.log);
-    if (!step) return;
+    if (!step || replayValid(V, [...session.log, { step: step.id, value }]).length !== session.log.length + 1) return;
     const before = snapshot(stageEl, step.id, step.kind === "pause" ? null : value);
     session.log.push({ step: step.id, value });
     saver.schedule();
@@ -139,8 +149,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
 
   scope.on(document, "keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const t = e.target as HTMLElement;
-    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    if (!shortcutsEnabled() || e.repeat || e.isComposing || isTyping(e.target)) return;
     if (e.key === "Backspace") {
       e.preventDefault();
       undo();
@@ -148,7 +157,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     }
     const step = currentStep(V, session.log);
     if (!step) return;
-    if (step.kind === "pause" && e.key === "Enter") {
+    if (step.kind === "pause" && e.key === "Enter" && (e.target === document.body || stageEl.contains(e.target as Node))) {
       e.preventDefault();
       choose(0);
     } else if (/^[1-9]$/.test(e.key)) {

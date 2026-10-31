@@ -13,7 +13,7 @@ import { computeProfile, publicKeys } from "../../server/questionnaire/engine";
 import { createRateLimiter } from "../../server/rateLimit";
 import { QUESTIONNAIRES } from "../../server/registry";
 import { findLeaks } from "../../tools/leaks";
-import { currentStep, MAX_ANXIETY_ORDER, type Pick } from "../../src/kinds/luscher/flow";
+import { PAIR_LINES, currentStep, MAX_ANXIETY_ORDER, type Pick } from "../../src/kinds/luscher/flow";
 
 let base = "";
 let server: http.Server;
@@ -73,6 +73,18 @@ describe("опросники", () => {
   });
 });
 
+test("точное влияние последнего ответа не включает предыдущие быстрые ответы", async () => {
+  const beforeAnswers = "NN" + ".".repeat(69);
+  const answers = "NNN" + ".".repeat(68);
+  const response = await post("/api/questionnaire/smol/score", { answers, beforeAnswers });
+  expect(response.status).toBe(200);
+  const result = await response.json();
+  expect(result.profile.raw["7"] - result.beforeProfile.raw["7"]).toBe(1);
+  expect(result.beforeProfile.answered).toBe(2);
+  expect(result.profile.answered).toBe(3);
+  expect((await post("/api/questionnaire/smol/score", { answers, beforeAnswers: "bad" })).status).toBe(400);
+});
+
 describe("Люшер", () => {
   /** Пройти тест по раскладке наибольшей тревожности. */
   function maxLog(variant: "short" | "full"): Pick[] {
@@ -82,7 +94,7 @@ describe("Люшер", () => {
       let value = 0;
       if (s.kind === "rank") value = Number(MAX_ANXIETY_ORDER[variant === "full" && k >= 5 ? (k === 5 ? 7 : 6) : k]);
       else if (s.kind === "achromatic") value = k;
-      else if (s.kind === "pairs") value = 1;
+      else if (s.kind === "pairs") value = PAIR_LINES[k][0];
       else if (s.kind === "figures") value = k;
       log.push({ step: s.id, value });
     }
@@ -96,6 +108,17 @@ describe("Люшер", () => {
       expect(r.main, variant).toMatchObject({ n: 2, anxiety: 12, deviation: 32 });
       expect(r.second.order).toBe(MAX_ANXIETY_ORDER);
     }
+  });
+
+  test("сервер отклоняет повторные карточки, неверный диапазон и цвет вне показанной пары", async () => {
+    for (const value of [-1, 8, 999]) {
+      expect((await post("/api/luscher/short/score", { log: [{ step: "rank1", value }] })).status).toBe(400);
+    }
+    expect((await post("/api/luscher/short/score", { log: Array.from({ length: 7 }, () => ({ step: "rank1", value: 0 })) })).status).toBe(400);
+    const log = maxLog("full");
+    const i = log.findIndex((p) => p.step === "pairs3");
+    const invalid = [...log.slice(0, i), { step: "pairs3", value: 2 }]; // первая пара — 1 и 4
+    expect((await post("/api/luscher/full/score", { log: invalid })).status).toBe(400);
   });
 
   test("подделанный журнал не ломает подсчёт", async () => {

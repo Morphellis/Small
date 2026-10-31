@@ -117,8 +117,11 @@ export interface KeysResponse {
 /** POST api/questionnaire/<id>/score. answers — по символу на вопрос: Y, N, ? или «.» (нет ответа). */
 export interface ScoreRequest {
   answers: string;
+  beforeAnswers?: string;
 }
 
 export interface ScoreResponse {
+  /** Профиль непосредственно до последнего действия, если передан beforeAnswers. */
+  beforeProfile?: Profile;
   profile: Profile;
 }

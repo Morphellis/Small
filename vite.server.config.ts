@@ -13,7 +13,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: "node22",
     minify: false,
-    rollupOptions: { output: { entryFileNames: "main.mjs" } }
+    rolldownOptions: { output: { entryFileNames: "main.mjs" } }
   },
   ssr: { noExternal: true }
 });

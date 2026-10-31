@@ -39,6 +39,7 @@ export interface Prefs {
 
 /** Что лежит в localStorage. Формат прежний: иначе у людей пропадут сохранённые ответы. */
 export interface Saved {
+  currentQuestion?: number;
   answers?: unknown[];
   history?: unknown[];
   keyMode?: boolean;
