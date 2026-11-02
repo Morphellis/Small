@@ -55,12 +55,12 @@ export function applyKeys(v: ViewCtx, list: HTMLElement): void {
 
 /** Почему ответ не дал баллов (или что дал бы другой ответ). */
 export function noScoreText(v: ViewCtx, i: number, a: Answer): string {
-  if (a === "?") return "«Не знаю» баллов не даёт";
+  if (a === "?") return "Ответ «Не знаю» не добавляет баллы";
   if (!v.keysReady) return "";
   const { other, alt } = answerEffect(v.keys[i], v.focus, a);
   return other.length
-    ? `«${WORD[a]}» баллов не даёт (даёт «${WORD[alt]}»: ${other.join(", ")})`
-    : "на отслеживаемые шкалы не влияет";
+    ? `Ответ «${WORD[a]}» не добавляет баллы. Ответ «${WORD[alt]}» добавляет баллы по шкалам: ${other.join(", ")}`
+    : "Ответ не влияет на отслеживаемые шкалы";
 }
 
 /*
@@ -70,7 +70,7 @@ export function noScoreText(v: ViewCtx, i: number, a: Answer): string {
 function impactHtml(v: ViewCtx, i: number, a: Answer): string {
   if (a !== "?") {
     const { mine } = answerEffect(v.keys[i], v.focus, a);
-    if (mine.length) return `<span class="lead">«${WORD[a]}» дал:</span>` + mine.map((s) => `<span class="chip plus"><b>${s}</b><i>+1</i></span>`).join("");
+    if (mine.length) return `<span class="lead">Ответ «${WORD[a]}»:</span>` + mine.map((s) => `<span class="chip plus"><b>${s}</b><i>+1</i></span>`).join("");
   }
   return `<span class="quiet">${noScoreText(v, i, a)}</span>`;
 }

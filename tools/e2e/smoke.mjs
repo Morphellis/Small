@@ -48,13 +48,13 @@ async function open(hash, theme = "dark") {
 /** Дождаться, пока сервер ответит на все запросы (aria-busy) и придёт ключ. */
 async function idle(where) {
   for (let i = 0; i < 100; i++) {
-    const ok = await b.js(`return !document.querySelector('[aria-busy="true"]') && !/загружается…/.test(document.getElementById("questions")?.textContent ?? "") && !document.querySelector(".lu-results .lu-empty")?.textContent.includes("Считаю");`);
+    const ok = await b.js(`return !document.querySelector('[aria-busy="true"]') && !/загружается…/.test(document.getElementById("questions")?.textContent ?? "") && !document.querySelector(".lu-results .lu-empty")?.textContent.includes("Расчёт показателей");`);
     if (ok) return true;
     await sleep(50);
   }
   return check(false, `${where}: сервер не ответил за 5 с`);
 }
-const noOffline = (where) => b.js(`return !/Нет связи/.test(document.body.innerText);`).then((ok) => check(ok, `${where}: нет сообщений «Нет связи»`));
+const noOffline = (where) => b.js(`return !/Соединение с сервером отсутствует/.test(document.body.innerText);`).then((ok) => check(ok, `${where}: нет сообщений «Нет связи»`));
 
 /** Обрыв связи: ответ отмечается, появляется «Нет связи», а когда связь вернулась — баллы досчитываются сами. */
 async function offline() {
@@ -64,7 +64,7 @@ async function offline() {
   await click('#q-1 button[data-a="N"]', "без связи: ответ на вопрос 1");
   await sleep(400);
   check(await b.js(`return document.querySelector("#q-1 button.on")?.dataset.a === "N";`), "без связи: ответ всё равно отмечается");
-  check(await b.js(`return /Нет связи/.test(document.getElementById("impact").textContent);`), "без связи: сообщение «Нет связи с сервером»");
+  check(await b.js(`return /Соединение с сервером отсутствует/.test(document.getElementById("impact").textContent);`), "без связи: сообщение «Нет связи с сервером»");
   await b.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await sleep(1200);
   await idle("связь вернулась");

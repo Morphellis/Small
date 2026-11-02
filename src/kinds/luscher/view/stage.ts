@@ -26,8 +26,8 @@ function questionHtml(def: LuscherDef, step: Step, k: number): string {
   const dislike = isDislikePhase(def.variant, step, k);
   const word = dislike ? `<b class="w-dis">неприятен</b>` : `<b class="w-like">симпатичен</b>`;
   const pill = dislike
-    ? ` <span class="lu-pill dis">выбираете, какой не нравится</span>`
-    : ` <span class="lu-pill like">выбираете, какой нравится</span>`;
+    ? ` <span class="lu-pill dis">Неприятные</span>`
+    : ` <span class="lu-pill like">Предпочтительные</span>`;
   switch (step.kind) {
     case "achromatic":
       return (k === 0 ? `Какой из этих пяти цветов вам наиболее ${word}?` : `Какой из оставшихся цветов вам наиболее ${word}?`) + pill;
@@ -50,7 +50,7 @@ function bodyHtml(step: Step, picks: number[], k: number, hint: number | null, l
       return `
         <div class="lu-pause">
           <p>Методика предполагает два подхода с небольшим перерывом.</p>
-          <p>Подождите пару минут и нажмите «Продолжить». Не старайтесь ни повторить первый порядок, ни специально его изменить — выбирайте так, будто видите цвета впервые.</p>
+          <p>Сделайте перерыв на несколько минут, затем нажмите «Продолжить тест». При повторном выборе оценивайте цвета заново, не стремясь сохранить или изменить предыдущий порядок.</p>
           <button type="button" class="btn lu-go" data-go>Продолжить тест</button>
         </div>`;
     case "rank":
@@ -72,13 +72,13 @@ function bodyHtml(step: Step, picks: number[], k: number, hint: number | null, l
 /** layout — раскладка восьми цветов, если текущий шаг — восьмицветовой выбор. */
 export function stageHtml(def: LuscherDef, d: Derived, keyMode: boolean, layout: number[] | null): string {
   const { step, k } = d;
-  if (!step) return `<div class="lu-done"><b>Тест пройден.</b> Итог — в блоке «Результат». Чтобы пройти ещё раз, нажмите «Сбросить».</div>`;
+  if (!step) return `<div class="lu-done"><b>Тест завершён.</b> Показатели приведены в разделе «Результат». Для повторного прохождения нажмите «Сбросить».</div>`;
   const picks = d.picks[step.id] ?? [];
   const hint = keyMode ? hintFor(def.variant, step, k) : null;
   const note = !keyMode || step.kind === "pause" ? ""
     : hint !== null
       ? `<p class="lu-note key">Эталонный ответ: выберите отмеченный цвет — <b>${escapeHtml(COLOR[hint].name)}</b>.</p>`
-      : `<p class="lu-note">На тревожность этот шаг не влияет — выбирайте как угодно.</p>`;
+      : `<p class="lu-note">Этот этап не влияет на показатель тревожности. Выбирайте по собственному предпочтению.</p>`;
   const chosen = step.kind === "rank" || step.kind === "achromatic"
     ? `<div class="lu-chosen">${picks.map((c, i) => `<span class="lu-chip${isDislikePhase(def.variant, step, i) ? " dis" : ""}">${
         swatch(step.kind === "achromatic" ? ACHROMATIC[c] : c)}</span>`).join("")}</div>`

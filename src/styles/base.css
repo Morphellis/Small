@@ -28,12 +28,12 @@
   --grid: #eef0f3;
   --grid-strong: #d7dce3;
   --band: rgba(59, 111, 224, 0.07);
-  --shadow: 0 2px 10px rgba(16, 24, 40, 0.08);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
   --shadow-sheet: 0 -8px 28px rgba(16, 24, 40, 0.16);
-  --radius: 12px;
-  --r-sm: 8px;
-  --r-lg: 16px;
-  --r-pill: 999px;
+  --radius: 8px;
+  --r-sm: 6px;
+  --r-lg: 10px;
+  --r-pill: 8px;
   --bar-mid: #1e8a2e;
   --bar-out: #d7263d;
   --bar-track: #eef0f3;
@@ -68,7 +68,7 @@
   --grid: #262b33;
   --grid-strong: #3a4150;
   --band: rgba(111, 156, 245, 0.10);
-  --shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   --shadow-sheet: 0 -8px 28px rgba(0, 0, 0, 0.5);
   --bar-mid: #34b356;
   --bar-out: #ff5468;

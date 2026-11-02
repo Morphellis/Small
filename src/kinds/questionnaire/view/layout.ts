@@ -36,7 +36,7 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
         <div class="sheet-scroll"><div class="sheet-grid" id="sheetGrid"></div></div>
         <ul class="legend">
           <li><span class="cell st-empty"></span>нет ответа</li>
-          <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>«Да» или «Нет» с первого раза</li>
+          <li><span class="cell st-first a-Y">Д</span><span class="cell st-first a-N">Н</span>первоначальный ответ «Да» или «Нет»</li>
           <li><span class="cell st-changed a-N">Н</span>ответ менялся (Да ↔ Нет${dk ? " или после «Не знаю»" : ""})</li>${dk ? `
           <li><span class="cell st-dk a-dk">?</span>«Не знаю»</li>
           <li><span class="cell st-dkAfter a-dk">?</span>сначала «Да»/«Нет», затем «Не знаю»</li>` : ""}
@@ -69,5 +69,5 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
     </aside>
   </div>
 
-  <button type="button" class="side-open" id="sideOpen" aria-controls="side">▲ Нажмите для открытия шкал</button>`;
+  <button type="button" class="side-open" id="sideOpen" aria-controls="side">Открыть шкалы</button>`;
 }

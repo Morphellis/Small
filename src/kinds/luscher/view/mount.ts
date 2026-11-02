@@ -73,7 +73,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     onBusy: (busy) => resultsEl.setAttribute("aria-busy", String(busy)),
     onError() {
       resultsEl.querySelector(".lu-offline")?.remove();
-      resultsEl.insertAdjacentHTML("afterbegin", `<p class="lu-offline">Нет связи с сервером — результат пересчитается, как только она появится. Выборы сохранены.</p>`);
+      resultsEl.insertAdjacentHTML("afterbegin", `<p class="lu-offline">Соединение с сервером отсутствует. Выборы сохранены. Расчёт возобновится после восстановления соединения.</p>`);
     }
   });
 

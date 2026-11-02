@@ -167,9 +167,9 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
       el.strip.replaceChildren();
       validity.root.className = "validity pending";
       validity.summary.textContent = "… Расчёт";
-      validity.body.textContent = "Ожидаем расчёт текущих ответов.";
+      validity.body.textContent = "Ожидание расчёта текущих ответов.";
       el.impact.className = "impact";
-      el.impact.innerHTML = `<span class="impact-empty">Загружаю баллы…</span>`;
+      el.impact.innerHTML = `<span class="impact-empty">Загрузка баллов…</span>`;
       return;
     }
     version++;
@@ -221,7 +221,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     applyAnswer(session, i, value);
     last = null;
     el.impact.className = "impact";
-    el.impact.textContent = "Пересчитываю влияние ответа…";
+    el.impact.textContent = "Расчёт изменений шкал…";
     renderProgress();
     lastQ = i;
     cur = advance && session.answers[i] !== null && i < v.n - 1 ? i + 1 : i;
@@ -336,7 +336,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     onBusy: (busy) => el.panel.setAttribute("aria-busy", String(busy)),
     onError() {
       el.impact.className = "impact miss";
-      el.impact.innerHTML = `<span class="imp-note">Нет связи с сервером — баллы пересчитаются, как только она появится. Ответы сохранены.</span>`;
+      el.impact.innerHTML = `<span class="imp-note">Соединение с сервером отсутствует. Ответы сохранены. Расчёт возобновится после восстановления соединения.</span>`;
     }
   });
 

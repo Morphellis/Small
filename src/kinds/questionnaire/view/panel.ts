@@ -14,7 +14,7 @@ import { noScoreText } from "./questions";
 export function renderImpact(v: ViewCtx, box: HTMLElement, last: LastAnswer | null, answer: MaybeAnswer): void {
   if (!last) {
     box.className = "impact is-empty";
-    box.innerHTML = `<span class="impact-empty">Отметьте ответ: здесь покажется, какие шкалы он изменил и насколько.</span>`;
+    box.innerHTML = `<span class="impact-empty">Выберите ответ для просмотра изменений шкал.</span>`;
     return;
   }
   const { q: i, before, after } = last;
@@ -28,10 +28,10 @@ export function renderImpact(v: ViewCtx, box: HTMLElement, last: LastAnswer | nu
       `<span class="d">${what}</span><span class="t">Т ${v.fmtT(before.t[s], before.extrapolated[s])} → ${v.fmtT(after.t[s], after.extrapolated[s])}</span></span>`;
   });
   const others = last.changedAll.filter((s) => !v.focus.has(s));
-  const more = others.length ? `<span class="imp-more">и ещё: ${others.join(", ")}</span>` : "";
+  const more = others.length ? `<span class="imp-more">Другие шкалы: ${others.join(", ")}</span>` : "";
   const body = chips.length
     ? `<span class="imp-label">Изменились:</span>${chips.join("")}${more}`
-    : `<span class="imp-note">Шкалы не изменились: ${answer === null ? "ответ снят, отслеживаемые шкалы не менялись" : noScoreText(v, i, answer)}</span>${more}`;
+    : `<span class="imp-note">${answer === null ? "Ответ снят. Отслеживаемые шкалы не изменились." : noScoreText(v, i, answer)}</span>${more}`;
   box.className = "impact " + (chips.length ? "hit" : "miss");
   box.innerHTML =
     `<div class="imp-q"><div class="imp-q-head">Вопрос ${i + 1} ${badge}</div><div class="imp-q-text">${escapeHtml(v.def.questions[i])}</div></div>` +
@@ -86,14 +86,14 @@ export function renderValidity(v: ViewCtx, els: ValidityEls, profile: Profile): 
     els.summary.innerHTML = incomplete
       ? `<b>…<span class="vt"> Предварительно</span></b><span class="v-counts">${profile.answered} из ${v.n}</span>`
       : `<b>✓<span class="vt"> Достоверен</span></b><span class="v-counts">${counts}</span>`;
-    els.body.innerHTML = `<p>${incomplete ? "Опросник ещё не завершён. Контрольные пороги пока не превышены; профиль предварительный. " : ""}${v.def.validityRule} Сейчас ${checks.length > 2 ? "все" : "оба"} в пределах.</p>`;
+    els.body.innerHTML = `<p>${incomplete ? "Опросник не завершён. Профиль предварительный. " : ""}${v.def.validityRule} Контрольные пороги не превышены.</p>`;
     return;
   }
   const bad = checks.filter((c) => c.exceeded);
   els.summary.innerHTML = `<b>✗<span class="vt"> Недостоверен</span></b><span class="v-counts">${bad.map((c) => `${c.scale} = ${c.value}${unit(c)}, допустимо до ${c.limit}`).join(" · ")}</span>`;
   els.body.innerHTML =
     bad.map((c) => `<p><b>${c.scale} = ${c.value}${unit(c)}</b> (${v.def.scaleInfo[c.scale].name.toLowerCase()}, допустимо не больше ${c.limit}${unit(c)}): ${c.reason}.</p>`).join("") +
-    `<p>По методике ${v.def.title} при таком результате шкалы не интерпретируют, а тест проходят заново.</p>`;
+    `<p>По методике ${v.def.title} такой профиль не подлежит интерпретации. Необходимо повторное прохождение теста.</p>`;
 }
 
 /** Пояснение к достоверности не должно вылезать за правый край экрана (плашка бывает у самого края). */

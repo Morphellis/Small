@@ -20,7 +20,7 @@ export function bindProgressTransfer(footer: Element, tests: readonly TestEntry[
   const details = document.createElement("details");
   details.className = "progress-transfer";
   details.innerHTML = `<summary>Перенести прогресс на другое устройство</summary>
-    <p>Скачайте файл и загрузите его на другом устройстве. В файле будут ответы всех тестов; храните его у себя.</p>
+    <p>Скачайте файл с ответами всех тестов и загрузите его на другом устройстве. Файл содержит личные ответы; храните его в защищённом месте.</p>
     <button type="button" class="btn" id="exportProgress">Скачать прогресс</button>
     <label class="btn import-progress" for="importProgress">Загрузить файл</label>
     <input type="file" id="importProgress" accept=".json,application/json">
@@ -51,7 +51,7 @@ export function bindProgressTransfer(footer: Element, tests: readonly TestEntry[
       if (!file) return;
       if (file.size > 1_048_576) throw new Error("Файл слишком большой (не больше 1 МБ).");
       const entries = parseProgress(await file.text(), keys);
-      if (!window.confirm("Заменить прогресс тестов данными из файла? Текущие ответы этих тестов будут заменены.")) return;
+      if (!window.confirm("Загрузить прогресс из файла? Это заменит текущие ответы соответствующих тестов.")) return;
       window.dispatchEvent(new Event("trainer:save"));
       const before = Object.fromEntries(Object.keys(entries).map((key) => [key, localStorage.getItem(key)]));
       const write = (values: Record<string, string | null>) => {

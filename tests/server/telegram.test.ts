@@ -17,7 +17,7 @@ describe("Telegram webhook", () => {
     const body = await r.json();
     expect(body.method).toBe("sendMessage");
     expect(body.chat_id).toBe(123);
-    expect(body.text).toContain("Добро пожаловать");
+    expect(body.text).toContain("СМОЛ, СМИЛ, ММИЛ и тест Люшера");
     expect(body.reply_markup.inline_keyboard[0][0].web_app.url).toBe("https://small.morphellis.workers.dev/");
   });
   test("ignores groups and non-message updates", async () => {
@@ -27,7 +27,7 @@ describe("Telegram webhook", () => {
   });
   test("ordinary private text also explains how to open the app", async () => {
     const r = await telegramWebhook(request({message:{chat:{id:123,type:"private"},text:"привет"}}), secret);
-    expect((await r.json()).text).toContain("мини-приложении");
+    expect((await r.json()).text).toContain("Открыть тренажёр");
   });
   test("rejects malformed and oversized bodies", async () => {
     const headers = {"X-Telegram-Bot-Api-Secret-Token":secret};

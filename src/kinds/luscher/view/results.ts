@@ -23,14 +23,14 @@ export function progressHtml(def: LuscherDef, d: Derived, result: LuscherResult 
 }
 
 function orderRow(label: string, s: OrderScore | null): string {
-  if (!s) return `<tr><th>${label}</th><td colspan="9" class="lu-empty">ещё не сделан</td></tr>`;
+  if (!s) return `<tr><th>${label}</th><td colspan="9" class="lu-empty">не завершён</td></tr>`;
   return `<tr><th>${label}</th>${[...s.order].map((c, i) =>
     `<td><span class="lu-mark">${MARKS[s.marks[i]]}</span>${swatch(Number(c))}</td>`
   ).join("")}<td class="lu-sum">${s.anxiety}</td></tr>`;
 }
 
 function scoreHtml(result: LuscherResult | null): string {
-  if (!result) return `<p class="lu-empty">Считаю…</p>`;
+  if (!result) return `<p class="lu-empty">Расчёт показателей…</p>`;
   if (!result.main) return `<p class="lu-empty">Показатель тревожности появится после первого восьмицветового выбора.</p>`;
   const { anxiety: a, n } = result.main;
   const band = bandOf(ANXIETY_BANDS, a);
@@ -40,7 +40,7 @@ function scoreHtml(result: LuscherResult | null): string {
           <div class="lu-gauge">${ANXIETY_BANDS.map((b) =>
             `<span class="g-${b.tone}" style="flex:${b.to - b.from + 1}"></span>`).join("")}<i style="left:${(a / 12) * 100}%"></i></div>
           <div class="lu-gauge-lbl"><span>0</span><span>3</span><span>7</span><span>11</span><span>12</span></div>
-          <p class="lu-band">${escapeHtml(band.label)}${n === 1 ? " · <small>предварительно, по первому выбору; итог считается по второму</small>" : ""}</p>
+          <p class="lu-band">${escapeHtml(band.label)}${n === 1 ? " · <small>предварительный результат по первому выбору; итоговый результат определяется по второму</small>" : ""}</p>
         </div>
         <div class="lu-extra">
           <div><span>Совокупное отклонение от аутогенной нормы</span><b>${result.main.deviation}</b><small>из 32 — чем больше, тем выше непродуктивная напряжённость</small></div>
@@ -68,7 +68,7 @@ function protocolHtml(d: Derived): string {
   }
   if (!rows.length) return "";
   return `<h3>Протокол</h3><table class="lu-proto"><tbody>${rows.join("")}</tbody></table>
-      <p class="lu-small">Эти шаги на показатель тревожности не влияют; в таблицах рядом с цветом — число его побед в парах.</p>`;
+      <p class="lu-small">Эти этапы не влияют на показатель тревожности. Число рядом с цветом показывает количество его предпочтений при сравнении пар.</p>`;
 }
 
 export function resultsHtml(def: LuscherDef, d: Derived, result: LuscherResult | null): string {
