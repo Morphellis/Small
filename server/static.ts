@@ -22,7 +22,7 @@ const TYPES: Record<string, string> = {
  * Политика безопасности страницы: скрипты только свои (и встроенный в index.html — по его хешу),
  * запросы только к своему серверу, встраивать сайт в чужие страницы (frame) нельзя.
  */
-function contentSecurityPolicy(indexHtml: string): string {
+export function contentSecurityPolicy(indexHtml: string): string {
   const hashes = [...indexHtml.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
     .map((m) => `'sha256-${createHash("sha256").update(m[1]).digest("base64")}'`);
   return [

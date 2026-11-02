@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && vite build --config vite.server.config.ts && tsx tools/check-leaks.ts",
+    "build:cloudflare": "npm run build && tsx tools/cloudflare-headers.ts",
+    "dev:cloudflare": "wrangler dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,6 +28,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.2"
   }
 }
