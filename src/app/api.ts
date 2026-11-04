@@ -9,18 +9,30 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
 export async function api<T>(path: string, init: { body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
-  const res = await fetch(new URL(path, document.baseURI), {
-    method: init.body === undefined ? "GET" : "POST",
-    headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    signal: init.signal
-  });
-  if (!res.ok) {
-    const msg = await res.json().then((j: { error?: string }) => j.error ?? "", () => "");
-    throw new ApiError(res.status, msg || `ошибка ${res.status}`);
+  const controller = new AbortController();
+  const cancel = () => controller.abort(init.signal?.reason);
+  if (init.signal?.aborted) cancel();
+  else init.signal?.addEventListener("abort", cancel, { once: true });
+  const timeout = setTimeout(() => controller.abort(new DOMException("Сервер не ответил вовремя.", "TimeoutError")), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(new URL(path, document.baseURI), {
+      method: init.body === undefined ? "GET" : "POST",
+      headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const msg = await res.json().then((j: { error?: string }) => j.error ?? "", () => "");
+      throw new ApiError(res.status, msg || `ошибка ${res.status}`);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timeout);
+    init.signal?.removeEventListener("abort", cancel);
   }
-  return (await res.json()) as T;
 }
 
 export interface Sync {
