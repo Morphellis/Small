@@ -487,14 +487,22 @@ table.scores { width: 100%; border-collapse: collapse; font-size: 13px; font-var
 
 @media (max-width: 640px) {
   /* недостоверный результат — отдельной строкой во всю ширину, кнопки остаются в одном ряду */
-  .validity.bad { order: 1; flex: 1 0 100%; }
+  .validity { order: 1; flex: 1 0 100%; }
   .validity summary { padding: 3px 8px; }
-  .validity:not(.bad) .vt { display: none; }
+  .validity .vt { display: inline; }
   .validity-body { position: fixed; top: auto; left: 10px; right: 10px; width: auto; margin-top: 4px; }
   .impact { min-height: 0; padding: 6px 10px; gap: 4px 10px; flex-wrap: wrap; }
   .imp-q { flex: 1 0 100%; }
   .imp-q-text { display: none; }
   .imp-chip b { font-size: 15px; }
+  /* Пояснение уже есть у вопроса; в шапке оставляем только точную дельту. */
+  .impact:has(.imp-q) .imp-q,
+  .impact:has(.imp-q) .imp-label,
+  .impact:has(.imp-q) .imp-more { display: none; }
+  .impact.miss:has(.imp-q) { display: none; }
+  .impact.hit { padding: 3px 6px; margin-bottom: 4px; }
+  .impact.hit .imp-body { flex-wrap: nowrap; overflow-x: auto; }
+  .impact.hit .imp-chip { flex: 0 0 auto; }
   /* все шкалы одной прокручиваемой строкой, чтобы панель не съедала экран */
   .strip { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; gap: 4px; padding-bottom: 2px; }
   .strip::-webkit-scrollbar { height: 5px; }

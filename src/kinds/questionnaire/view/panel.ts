@@ -84,14 +84,17 @@ export function renderValidity(v: ViewCtx, els: ValidityEls, profile: Profile): 
     // По сырым баллам: «L 2 из 4»; по Т-баллам: «L 49 Т, до 70».
     const counts = checks.map((c) => (c.unit ? `${c.scale} ${c.value}${unit(c)}, до ${c.limit}` : `${c.scale} ${c.value} из ${c.limit}`)).join(" · ");
     els.summary.innerHTML = incomplete
-      ? `<b>…<span class="vt"> Предварительно</span></b><span class="v-counts">${profile.answered} из ${v.n}</span>`
+      ? `<b><span class="vt">Тест не завершён</span></b><span class="v-counts">${profile.answered} из ${v.n}</span>`
       : `<b>✓<span class="vt"> Достоверен</span></b><span class="v-counts">${counts}</span>`;
     els.body.innerHTML = `<p>${incomplete ? "Опросник не завершён. Профиль предварительный. " : ""}${v.def.validityRule} Контрольные пороги не превышены.</p>`;
     return;
   }
   const bad = checks.filter((c) => c.exceeded);
-  els.summary.innerHTML = `<b>✗<span class="vt"> Недостоверен</span></b><span class="v-counts">${bad.map((c) => `${c.scale} = ${c.value}${unit(c)}, допустимо до ${c.limit}`).join(" · ")}</span>`;
+  els.summary.innerHTML = incomplete
+    ? `<b><span class="vt">Тест не завершён</span></b><span class="v-counts">${profile.answered} из ${v.n}</span>`
+    : `<b>✗<span class="vt"> Недостоверен</span></b><span class="v-counts">${bad.map((c) => `${c.scale} = ${c.value}${unit(c)}, допустимо до ${c.limit}`).join(" · ")}</span>`;
   els.body.innerHTML =
+    (incomplete ? "<p>Опросник не завершён. Профиль предварительный.</p>" : "") +
     bad.map((c) => `<p><b>${c.scale} = ${c.value}${unit(c)}</b> (${v.def.scaleInfo[c.scale].name.toLowerCase()}, допустимо не больше ${c.limit}${unit(c)}): ${c.reason}.</p>`).join("") +
     `<p>По методике ${v.def.title} такой профиль не подлежит интерпретации. Необходимо повторное прохождение теста.</p>`;
 }

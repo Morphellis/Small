@@ -6,6 +6,24 @@ async function open(page: import("@playwright/test").Page, id = "smol") {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
+test("телефон: явный предварительный статус и компактная обратная связь", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 740 });
+  await open(page, "smil");
+  await expect(page.locator("#validitySum .vt")).toBeVisible();
+  await expect(page.locator("#validitySum")).toContainText("Тест не завершён");
+  await expect(page.locator("#q-14 .q-text")).toContainText("(Ответить «Я не знаю»)");
+  await page.locator('#q-1 button[data-a="N"]').click();
+  await expect(page.locator("#panel")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("#impact .imp-q")).toBeHidden();
+  await expect(page.locator("#q-1 .q-impact")).toBeVisible();
+  await expect(page.locator("#validitySum")).toContainText("Тест не завершён");
+  const initialHeight = await page.locator("#panel").evaluate((e) => e.getBoundingClientRect().height);
+  await page.locator('#q-2 button[data-a="N"]').click();
+  await expect(page.locator("#impact .imp-chip").first()).toBeVisible();
+  const changedHeight = await page.locator("#panel").evaluate((e) => e.getBoundingClientRect().height);
+  expect(changedHeight - initialHeight).toBeLessThan(50);
+});
+
 test("фокус, отключение клавиш, прогресс и продолжение после перезагрузки", async ({ page }) => {
   await open(page);
   await expect(page.locator("#validitySum")).not.toContainText("Достоверен");
