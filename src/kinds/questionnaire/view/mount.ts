@@ -13,7 +13,7 @@ import { byId } from "../../../app/html";
 import { setPressed, bindHeader } from "../../../app/header";
 import { reducedMotion, tween } from "../../../app/motion";
 import { createScope } from "../../../app/scope";
-import { createSaver, readJson } from "../../../app/storage";
+import { createSaver, readProgress } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
 import { encodeAnswers } from "../answers";
 import { applyAnswer, emptySession, lastAnswer, loadSaved, toSaved, type LastAnswer, type ProfileView, type Saved } from "../model";
@@ -57,12 +57,13 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   const validity: ValidityEls = { root: byId<HTMLDetailsElement>(root, "validity"), summary: byId(root, "validitySum"), body: byId(root, "validityBody") };
 
   // ---------- состояние ----------
-  const saved = readJson<Saved>(def.storageKey);
+  const saved = readProgress<Saved>(def.storageKey);
   const loaded = loadSaved(def, saved, WIDE.matches);
   let session = loaded.session;
   const prefs = loaded.prefs;
   /** Последний расчёт сервера; null — ещё не пришёл. */
   let profile: Profile | null = null;
+  let scoreCurrent = false;
   /** Что изменил последний ответ (по двум расчётам сервера). */
   let last: LastAnswer | null = null;
   /** На какой вопрос ответили последним — подсвечивается сразу, не дожидаясь сервера. */
@@ -75,8 +76,8 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
   let restoreCur = !!saved && cur > 0 && session.answers.some((a) => a !== null);
 
   const saver = createSaver(def.storageKey, () => ({ ...toSaved(session, prefs, WIDE.matches), currentQuestion: cur }));
-  scope.add(saver.flush);
-  scope.on(window, "pagehide", saver.flush);
+  scope.add(saver.dispose);
+  scope.on(window, "pagehide", saver.flushBeforeExit);
   scope.on(window, "trainer:save", saver.flush);
 
   const questionEl = (i: number) => el.questions.children[i] as HTMLElement;
@@ -157,6 +158,19 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     byId<HTMLButtonElement>(root, "nextUnanswered").disabled = answered === v.n;
   }
 
+  function markScoresStale() {
+    scoreCurrent = false;
+    el.side.dataset.stale = "true";
+    el.strip.dataset.stale = "true";
+    const state = byId(root, "scoreState");
+    state.hidden = false;
+    state.textContent = profile ? "Результат устарел. Ожидание пересчёта текущих ответов." : "Ожидание расчёта.";
+    const answered = session.answers.filter((a) => a !== null).length;
+    validity.root.className = "validity pending";
+    validity.summary.textContent = answered < v.n ? "Тест не завершён · ожидание расчёта" : "Ожидание расчёта";
+    validity.body.textContent = "Результат текущих ответов ещё не получен. Предыдущие баллы не относятся к текущему набору ответов.";
+  }
+
   function renderScores() {
     if (!profile) {
       stopTween();
@@ -177,6 +191,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     renderStrip(v, el.strip, profile, last, prefs.stripAll);
     renderImpact(v, el.impact, last, last ? session.answers[last.q] : null);
     renderProfile();
+    if (!scoreCurrent) markScoresStale();
   }
 
   function renderLayout() {
@@ -223,6 +238,7 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     el.impact.className = "impact";
     el.impact.textContent = "Расчёт изменений шкал…";
     renderProgress();
+    markScoresStale();
     lastQ = i;
     cur = advance && session.answers[i] !== null && i < v.n - 1 ? i + 1 : i;
     for (const q of new Set([i, prevCur, cur, ...(prevLast === null ? [] : [prevLast])])) renderRow(q);
@@ -327,13 +343,20 @@ export function mountQuestionnaire(def: QuestionnaireSpec, root: HTMLElement, ct
     onResult({ next, before, q }) {
       last = before && q !== null ? lastAnswer(def, q, before, next, v.focus) : null;
       profile = next;
+      scoreCurrent = true;
+      delete el.side.dataset.stale;
+      delete el.strip.dataset.stale;
+      byId(root, "scoreState").hidden = true;
       renderScores();
       // Строка «что изменил ответ» в шапке могла стать выше и закрыть вопрос, к которому только что перешли.
       if (followCur || restoreCur) scrollToQuestion(cur);
       restoreCur = false;
       followCur = false;
     },
-    onBusy: (busy) => el.panel.setAttribute("aria-busy", String(busy)),
+    onBusy: (busy) => {
+      el.panel.setAttribute("aria-busy", String(busy));
+      if (busy) markScoresStale();
+    },
     onError() {
       el.impact.className = "impact miss";
       el.impact.innerHTML = `<span class="imp-note">Соединение с сервером отсутствует. Ответы сохранены. Расчёт возобновится после восстановления соединения.</span>`;

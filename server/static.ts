@@ -34,14 +34,13 @@ export function contentSecurityPolicy(indexHtml: string): string {
     "connect-src 'self'",
     "base-uri 'self'",
     "form-action 'none'",
-    "frame-ancestors 'none'"
+    "frame-ancestors 'self' https://web.telegram.org https://*.web.telegram.org"
   ].join("; ");
 }
 
 export const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "X-Frame-Options": "DENY",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
 };
 

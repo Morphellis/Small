@@ -1,4 +1,6 @@
 import type { TestEntry } from "./types";
+import { validProgressEntry } from "./progressValidation";
+import { progressSnapshot } from "./storage";
 
 /** Проверка всего файла до первой записи: посторонние настройки не импортируются. */
 export function parseProgress(text: string, allowed: readonly string[]): Record<string, string | null> {
@@ -10,7 +12,7 @@ export function parseProgress(text: string, allowed: readonly string[]): Record<
     throw new Error("Это не поддерживаемый файл прогресса тренажёра.");
   }
   const pairs = Object.entries(entries);
-  if (!pairs.length || pairs.some(([key, value]) => !allowed.includes(key) || (value !== null && (typeof value !== "object" || Array.isArray(value))))) {
+  if (!pairs.length || pairs.some(([key, value]) => !allowed.includes(key) || !validProgressEntry(key, value))) {
     throw new Error("В файле неподходящие данные. Прогресс не изменён.");
   }
   return Object.fromEntries(pairs.map(([key, value]) => [key, value === null ? null : JSON.stringify(value)]));
@@ -31,7 +33,7 @@ export function bindProgressTransfer(footer: Element, tests: readonly TestEntry[
   details.querySelector("#exportProgress")!.addEventListener("click", () => {
     try {
       window.dispatchEvent(new Event("trainer:save"));
-      const entries = Object.fromEntries(keys.map((key) => [key, JSON.parse(localStorage.getItem(key) ?? "null")]));
+      const entries = Object.fromEntries(keys.map((key) => [key, progressSnapshot(key)]));
       const blob = new Blob([JSON.stringify({ format: "trainer-progress", version: 1, entries }, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

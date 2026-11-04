@@ -54,6 +54,7 @@ export function layoutHtml(ctx: AppContext, dk: boolean): string {
           <button type="button" role="tab" id="view-chart" aria-controls="chartWrap" data-view="chart">График</button>
         </div>
       </div>
+      <p id="scoreState" class="score-state" role="status" hidden></p>
       <div class="chart-wrap" id="chartWrap" role="tabpanel" aria-labelledby="view-chart">
         <div class="bars" id="bars"></div>
         <svg id="chart" viewBox="0 0 600 290" role="img" aria-label="Профиль Т-баллов"></svg>

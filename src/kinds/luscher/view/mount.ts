@@ -8,7 +8,7 @@ import { bindHeader, buttonHtml, headerHtml, keyButton, setPressed } from "../..
 import { shortcutsEnabled, isTyping } from "../../../app/shortcuts";
 import { byId } from "../../../app/html";
 import { createScope } from "../../../app/scope";
-import { createSaver, readJson, readString, writeString } from "../../../app/storage";
+import { createSaver, readProgress, readString, writeString } from "../../../app/storage";
 import type { AppContext, Unmount } from "../../../app/types";
 import { currentStep } from "../flow";
 import { replayValid, derive, emptySession, layoutFor, loadSaved, toSaved, type Saved } from "../model";
@@ -44,10 +44,10 @@ function layoutHtml(ctx: AppContext): string {
 export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext): Unmount {
   const V = def.variant;
   const scope = createScope();
-  let session = loadSaved(V, readJson<Saved>(def.storageKey));
+  let session = loadSaved(V, readProgress<Saved>(def.storageKey));
   const saver = createSaver(def.storageKey, () => toSaved(session));
-  scope.add(saver.flush);
-  scope.on(window, "pagehide", saver.flush);
+  scope.add(saver.dispose);
+  scope.on(window, "pagehide", saver.flushBeforeExit);
   scope.on(window, "trainer:save", saver.flush);
 
   root.innerHTML = layoutHtml(ctx);
@@ -111,6 +111,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     if (!step || replayValid(V, [...session.log, { step: step.id, value }]).length !== session.log.length + 1) return;
     const before = snapshot(stageEl, step.id, step.kind === "pause" ? null : value);
     session.log.push({ step: step.id, value });
+    result = null;
     saver.schedule();
     render();
     scoring.request();
@@ -122,6 +123,7 @@ export function mountLuscher(def: LuscherDef, root: HTMLElement, ctx: AppContext
     if (!popped) return;
     const before = snapshot(stageEl, stepId(), null);
     session.log.pop();
+    result = null;
     saver.schedule();
     render();
     scoring.request();
