@@ -7,7 +7,7 @@ const button = (text:string, callback_data:string):TrainingButton => ({text,call
 const view = (text:string, rows:TrainingButton[][]):TrainingView => ({text,reply_markup:{inline_keyboard:rows}});
 
 export function trainingHome():TrainingView {
-  return view('Small — тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nОткройте тренажёр для полного прохождения или выберите тест для изучения вопросов по шкалам.', [
+  return view('Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение', [
     [{text:'Открыть тренажёр',web_app:{url:TRAINER_URL}}],
     ...Object.values(QUESTIONNAIRES).map(def => [button(def.title,`t1:test:${def.id}`)])
   ]);

@@ -26,3 +26,13 @@ Production Worker `small` должен иметь два секрета:
 5. Открыть полное приложение и убедиться, что его сохранённые ответы не изменены.
 
 Автоматические проверки перебирают все вопросы всех шкал трёх опросников, сверяют текст и ответ с серверными ключами, проверяют границы и длину callback_data. Отдельно проверяются авторизация, чужие нажатия, повторные нажатия и ошибки Telegram.
+
+## Отдельное развёртывание ветки BotsFeature9nov
+
+Для этой ветки используется Worker `small-botsfeature9nov`, конфигурация `wrangler.bots.jsonc`.
+
+Команда сборки: `npm run build:cloudflare`.
+Команда публикации: `npx wrangler deploy --config wrangler.bots.jsonc`.
+Production branch отдельного Worker: `BotsFeature9nov`. Основной Worker `small` продолжает собираться из `main`.
+
+Секреты TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET задаются отдельно для каждого Worker. После настройки `/api/telegram/setup` webhook существующего бота будет указывать на новый Worker. Кнопка полного тренажёра продолжает открывать основной сайт small.morphellis.workers.dev.
