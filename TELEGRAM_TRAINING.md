@@ -36,3 +36,6 @@ Production Worker `small` должен иметь два секрета:
 Production branch отдельного Worker: `BotsFeature9nov`. Основной Worker `small` продолжает собираться из `main`.
 
 Секреты TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET задаются отдельно для каждого Worker. После настройки `/api/telegram/setup` webhook существующего бота будет указывать на новый Worker. Кнопка полного тренажёра продолжает открывать основной сайт small.morphellis.workers.dev.
+
+Адрес отдельной версии: `https://small-botsfeature9nov.morphellis.workers.dev/`.
+Предварительные сборки других веток для этого Worker отключены. Изменения в BotsFeature9nov автоматически публикуются в отдельном Worker; main остаётся источником основного сайта.
