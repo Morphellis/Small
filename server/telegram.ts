@@ -1,4 +1,4 @@
-import { trainingHome, trainingView } from './telegramTraining';
+import { trainingHome, trainingView, trainingWidgetHtml } from './telegramTraining';
 
 async function callTelegram(token:string, method:string, body:unknown):Promise<boolean> {
   try {
@@ -66,6 +66,10 @@ export async function telegramWebhook(request: Request, secret: string | undefin
       typeof message.text !== "string") return json({ ok: true });
   const command = /^\/(start|help|app|learn|scales)(?:@[a-zA-Z0-9_]+)?(?:\s|$)/i.test(message.text);
   const home = trainingHome();
+  if (command) return json({
+    method:'sendWidget', chat_id:message.chat.id, html:trainingWidgetHtml(), caption:home.text,
+    reply_markup:home.reply_markup
+  });
   return json({
     method: "sendMessage",
     chat_id: message.chat.id,

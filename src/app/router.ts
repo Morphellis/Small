@@ -4,6 +4,8 @@
  */
 import { readString, writeString } from "./storage";
 import type { AppContext, TestEntry, Unmount } from "./types";
+import { mountStudy } from './study';
+import { parseStudyLink, studyHash, type StudyRoute } from './studyRoute';
 
 const LAST_TEST_KEY = "trainer-test";
 
@@ -20,6 +22,18 @@ export function startRouter(root: HTMLElement, tests: readonly TestEntry[]): voi
 
   let notice: HTMLElement | null = null;
   let pending: TestEntry | null = null;
+
+  function showStudy(route:StudyRoute) {
+    loading++;
+    pending = null;
+    notice?.remove(); notice = null;
+    unmount?.();
+    current = null;
+    history.replaceState(null,'',studyHash(route));
+    unmount = mountStudy(root,route);
+    window.scrollTo({top:0});
+    first = false;
+  }
 
   async function show(entry: TestEntry, retryLoad = false) {
     const ticket = ++loading;
@@ -76,9 +90,13 @@ export function startRouter(root: HTMLElement, tests: readonly TestEntry[]): voi
 
   // Смена #smol / #smil в адресе или переход по такой ссылке на открытой странице.
   window.addEventListener("hashchange", () => {
+    const study = parseStudyLink(location.hash);
+    if (study) { showStudy(study); return; }
     const t = byId(location.hash.slice(1));
     if (t) void show(t);
   });
 
-  void show(pick());
+  const study = parseStudyLink(location.hash,location.search);
+  if (study) showStudy(study);
+  else void show(pick());
 }

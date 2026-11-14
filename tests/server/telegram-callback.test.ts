@@ -18,7 +18,7 @@ test('нажатие обновляет одно сообщение и подт�
   const sent = JSON.parse((options as RequestInit).body as string);
   expect(sent.chat_id).toBe(123);
   expect(sent.message_id).toBe(10);
-  expect(sent.text).toContain('Ответ по ключу:');
+  expect(sent.text).toContain('Откройте вопрос в приложении.');
 });
 
 test('нет токена: пользователь получает сообщение, без исходящего запроса', async () => {

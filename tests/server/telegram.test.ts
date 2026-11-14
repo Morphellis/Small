@@ -15,10 +15,10 @@ describe("Telegram webhook", () => {
   test("start deep links receive a real Mini App button in a private chat", async () => {
     const r = await telegramWebhook(request({message:{chat:{id:123,type:"private"},text:"/start campaign"}}), secret);
     const body = await r.json();
-    expect(body.method).toBe("sendMessage");
+    expect(body.method).toBe("sendWidget");
     expect(body.chat_id).toBe(123);
-    expect(body.text).toContain("СМОЛ, СМИЛ, ММИЛ и тест Люшера");
-    expect(body.text).toBe('Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение');
+    expect(body.caption).toContain("СМОЛ, СМИЛ, ММИЛ и тест Люшера");
+    expect(body.caption).toBe('Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение');
     expect(body.reply_markup.inline_keyboard[0][0].web_app.url).toBe("https://small.morphellis.workers.dev/");
   });
   test("ignores groups and non-message updates", async () => {

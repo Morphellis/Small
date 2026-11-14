@@ -18,6 +18,7 @@ import { replayValid } from "../src/kinds/luscher/model";
 import { scoreLuscher } from "./luscher/score";
 import { computeProfile, publicKeys } from "./questionnaire/engine";
 import { LUSCHER_VARIANTS, QUESTIONNAIRES } from "./registry";
+import { studyQuestions } from './study';
 
 /** Больше любого честного запроса: 566 ответов СМИЛ или журнал полного Люшера — это единицы КБ. */
 const MAX_BODY = 16 * 1024;
@@ -85,6 +86,14 @@ async function route(req: IncomingMessage, path: string): Promise<{ status: numb
   if (parts.length === 2 && parts[1] === "health") {
     expect("GET");
     return { status: 200, body: { ok: true } };
+  }
+
+  if (parts.length === 5 && parts[1] === 'questionnaire' && parts[3] === 'study') {
+    expect('GET');
+    const def = Object.hasOwn(QUESTIONNAIRES, parts[2]) ? QUESTIONNAIRES[parts[2]] : undefined;
+    const body = def ? studyQuestions(def,parts[4]) : null;
+    if (!body) throw new HttpError(404,'нет такой шкалы');
+    return {status:200,body,cache:'no-cache'};
   }
 
   if (parts.length === 4 && parts[1] === "questionnaire") {

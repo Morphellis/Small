@@ -1,56 +1,40 @@
 import { QUESTIONNAIRES } from './registry';
+import { studyScales } from './study';
+import { escapeHtml } from '../src/app/html';
 
 export const TRAINER_URL = 'https://small.morphellis.workers.dev/';
-export interface TrainingButton { text: string; callback_data?: string; web_app?: {url:string} }
+export const STUDY_URL = 'https://small-botsfeature9nov.morphellis.workers.dev/';
+export const BOT_USERNAME = 'odinochnayaPalata_bot';
+export interface TrainingButton { text:string; callback_data?:string; web_app?:{url:string} }
 export interface TrainingView { text:string; reply_markup:{inline_keyboard:TrainingButton[][]} }
-const button = (text:string, callback_data:string):TrainingButton => ({text,callback_data});
-const view = (text:string, rows:TrainingButton[][]):TrainingView => ({text,reply_markup:{inline_keyboard:rows}});
-
+export const studyUrl = (test:string,scale:string,question:number) => `${STUDY_URL}#study/${test}/${scale}/${question}`;
 export function trainingHome():TrainingView {
-  return view('Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение', [
+  return {text:'Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение',reply_markup:{inline_keyboard:[
     [{text:'Открыть тренажёр',web_app:{url:TRAINER_URL}}],
-    ...Object.values(QUESTIONNAIRES).map(def => [button(def.title,`t1:test:${def.id}`)])
-  ]);
+    ...Object.values(QUESTIONNAIRES).map(def => [{text:`Шкалы ${def.title}`,web_app:{url:studyUrl(def.id,studyScales(def)[0].id,studyScales(def)[0].first)}}])
+  ]}};
 }
 
+/** Старые сообщения с callback-кнопками открывают новый экран приложения. */
 export function trainingView(data:string):TrainingView | null {
   if (data === 't1:home') return trainingHome();
   const parts = data.split(':');
-  if (parts[0] !== 't1') return null;
   const [,action,id,scale,position,mode,selected] = parts;
-  if (!Object.hasOwn(QUESTIONNAIRES,id ?? '')) return null;
+  if (parts[0] !== 't1' || !Object.hasOwn(QUESTIONNAIRES,id ?? '')) return null;
   const def = QUESTIONNAIRES[id];
-  if (action === 'test' && parts.length === 3) {
-    const rows = def.scaleOrder.filter(s => def.key[s].yes.length + def.key[s].no.length > 0).map(s => [
-      button(`${def.scaleInfo[s].code}: ${def.scaleInfo[s].title}`,`t1:card:${id}:${s}:0:l`)
-    ]);
-    return view(`${def.title}\n\nВыберите шкалу. В режиме изучения ответ по ключу показан сразу. В режиме самопроверки сначала выберите свой ответ.`, [...rows,[button('Выбрать тест','t1:home')]]);
-  }
+  const scales = studyScales(def);
+  if (action === 'test' && parts.length === 3) return {text:`${def.title}\n\nВыберите шкалу. Вопросы откроются в приложении.`,reply_markup:{inline_keyboard:scales.map(s => [{text:`${s.code}: ${s.title}`,web_app:{url:studyUrl(id,s.id,s.first)}}])}};
   if (!['card','answer'].includes(action) || !def.scaleOrder.includes(scale) || !/^(0|[1-9]\d{0,3})$/.test(position ?? '') || !['l','q'].includes(mode)) return null;
   if ((action === 'card' && parts.length !== 6) || (action === 'answer' && (parts.length !== 7 || mode !== 'q' || !['Y','N'].includes(selected)))) return null;
-  const key = def.key[scale];
-  const numbers = [...new Set([...key.yes,...key.no])].sort((a,b) => a-b);
-  const index = Number(position);
-  if (index >= numbers.length) return null;
-  const n = numbers[index];
-  const expected = [...(key.yes.includes(n) ? ['Y'] : []),...(key.no.includes(n) ? ['N'] : [])];
-  const label = (a:string) => a === 'Y' ? 'Да' : 'Нет';
-  const keyText = `Ответ по ключу: ${expected.map(a => `«${label(a)}»`).join(' или ')}.\nТакой ответ добавляет 1 сырой балл к выбранной шкале.`;
-  let text = `${def.title} · ${def.scaleInfo[scale].code}: ${def.scaleInfo[scale].title}\nВопрос ${index+1} из ${numbers.length} · Пункт № ${n}\n\n${def.questions[n-1]}`;
-  const rows:TrainingButton[][] = [];
-  const callback = (i:number,m = mode) => `t1:card:${id}:${scale}:${i}:${m}`;
-  if (mode === 'l') text += `\n\n${keyText}`;
-  else if (action === 'answer') text += `\n\nВаш ответ: «${label(selected)}». ${expected.includes(selected) ? 'Совпадает с ключом.' : 'Не совпадает с ключом.'}\n${keyText}`;
-  else {
-    text += '\n\nКакой ответ добавляет балл к этой шкале?';
-    rows.push(['Y','N'].map(a => button(label(a),`t1:answer:${id}:${scale}:${index}:q:${a}`)));
-  }
-  if (index === numbers.length-1 && (mode === 'l' || action === 'answer')) text += '\n\nЭто последний вопрос шкалы.';
-  const nav:TrainingButton[] = [];
-  if (index > 0) nav.push(button('← Назад',callback(index-1)));
-  if (index < numbers.length-1) nav.push(button('Далее →',callback(index+1)));
-  if (nav.length) rows.push(nav);
-  rows.push([button(mode === 'l' ? 'Самопроверка' : 'Показать ключ',callback(index,mode === 'l' ? 'q' : 'l'))]);
-  rows.push([button('Выбрать шкалу',`t1:test:${id}`),button('Выбрать тест','t1:home')]);
-  return view(text,rows);
+  const numbers = [...new Set([...def.key[scale].yes,...def.key[scale].no])].sort((a,b) => a-b);
+  const number = numbers[Number(position)];
+  if (!number) return null;
+  return {text:`${def.title} · ${def.scaleInfo[scale].code}: ${def.scaleInfo[scale].title}\n\nПункт № ${number}. Откройте вопрос в приложении.`,reply_markup:{inline_keyboard:[[{text:'Открыть вопрос',web_app:{url:studyUrl(id,scale,number)}}]]}};
+}
+
+export function trainingWidgetHtml():string {
+  const definitions = Object.values(QUESTIONNAIRES);
+  const tabs = definitions.map((def,i) => `<button data-test="${def.id}" id="tab-${def.id}"${i === 0 ? ' disabled' : ''} onclick="choose('${def.id}')">${escapeHtml(def.title)}</button>`).join('');
+  const sections = definitions.map((def,i) => `<section id="${def.id}"${i ? ' hidden' : ''}><div class="scales">${studyScales(def).map(s => `<button data-scale="${s.id}" onclick="TelegramWidget.openTelegramLink('https://t.me/${BOT_USERNAME}/study?startapp=study_${def.id}_${s.id}_${s.first}')">${escapeHtml(s.code)}: ${escapeHtml(s.title)}</button>`).join('')}</div></section>`).join('');
+  return `<html><head><style>body{font:14px system-ui}h3{margin:0 0 12px}.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{flex:1;min-height:40px}.scales{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(min-width:480px){.scales{grid-template-columns:repeat(3,1fr)}}.scales button{min-height:42px;text-align:left;padding:8px;font:inherit}p{color:var(--tg-theme-hint-color);margin:12px 0 0;font-size:12px}</style></head><body><h3>Изучение шкал</h3><div class="tabs">${tabs}</div>${sections}<p>Выберите шкалу. Вопросы и ответы по ключу откроются в приложении.</p><script>function choose(id){['smol','smil','mmil'].forEach(function(t){document.getElementById(t).hidden=t!==id;document.getElementById('tab-'+t).disabled=t===id})}TelegramWidget.ready();</script></body></html>`;
 }

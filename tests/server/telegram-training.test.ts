@@ -1,47 +1,51 @@
 import { describe, expect, test } from 'vitest';
-import { trainingHome, trainingView } from '../../server/telegramTraining';
+import { deflateSync } from 'node:zlib';
+import { trainingHome, trainingView, trainingWidgetHtml } from '../../server/telegramTraining';
 import { QUESTIONNAIRES } from '../../server/registry';
+import { studyQuestions, studyScales } from '../../server/study';
+import { parseStudyLink } from '../../src/app/studyRoute';
 
-describe('изучение шкал в Telegram', () => {
-  test('главное меню содержит три опросника и ссылку на приложение', () => {
-    const home = trainingHome();
-    expect(home.reply_markup.inline_keyboard.flat().filter(b => b.callback_data).map(b => b.callback_data)).toEqual(['t1:test:smol','t1:test:smil','t1:test:mmil']);
-    expect(home.reply_markup.inline_keyboard[0][0].web_app?.url).toMatch(/^https:/);
+describe('карточка шкал и переходы в приложение', () => {
+  test('карточка укладывается в ограничения Telegram и содержит только ссылки на шкалы', () => {
+    const html = trainingWidgetHtml();
+    expect(Buffer.byteLength(html)).toBeLessThanOrEqual(32768);
+    expect(deflateSync(html,{level:9}).length).toBeLessThanOrEqual(4096);
+    expect(html).toContain('TelegramWidget.openTelegramLink');
+    expect(html).not.toMatch(/fetch\(|XMLHttpRequest|Ответ по ключу/);
+    for (const def of Object.values(QUESTIONNAIRES)) for (const s of studyScales(def)) {
+      expect(html).toContain(`startapp=study_${def.id}_${s.id}_${s.first}`);
+    }
   });
-  for (const def of Object.values(QUESTIONNAIRES)) {
-    test(`${def.id}: все вопросы каждой шкалы соответствуют серверному ключу`, () => {
-      const menu = trainingView(`t1:test:${def.id}`)!;
-      expect(menu).not.toBeNull();
-      for (const s of def.scaleOrder) {
-        const key = def.key[s];
-        const numbers = [...new Set([...key.yes,...key.no])].sort((a,b) => a-b);
-        expect(menu.reply_markup.inline_keyboard.flat().some(b => b.callback_data === `t1:card:${def.id}:${s}:0:l`)).toBe(numbers.length > 0);
-        for (const [index,n] of numbers.entries()) {
-          const card = trainingView(`t1:card:${def.id}:${s}:${index}:l`)!;
-          expect(card.text).toContain(def.questions[n-1]);
-          expect(card.text).toContain(`Пункт № ${n}`);
-          expect(card.text).toContain(`Вопрос ${index+1} из ${numbers.length}`);
-          if (key.yes.includes(n)) expect(card.text).toContain('«Да»');
-          if (key.no.includes(n)) expect(card.text).toContain('«Нет»');
-          expect(card.text.length).toBeLessThan(4096);
-          for (const b of card.reply_markup.inline_keyboard.flat()) if (b.callback_data) {
-            expect(Buffer.byteLength(b.callback_data)).toBeLessThanOrEqual(64);
-            expect(trainingView(b.callback_data)).not.toBeNull();
-          }
-          const quiz = trainingView(`t1:card:${def.id}:${s}:${index}:q`)!;
-          expect(quiz.text).not.toContain('Ответ по ключу:');
-          for (const a of ['Y','N']) {
-            const result = trainingView(`t1:answer:${def.id}:${s}:${index}:q:${a}`)!;
-            const correct = a === 'Y' ? key.yes.includes(n) : key.no.includes(n);
-            expect(result.text).toContain(correct ? 'Совпадает с ключом.' : 'Не совпадает с ключом.');
-            expect(result.text).toContain('Ответ по ключу:');
-          }
-        }
-        expect(trainingView(`t1:card:${def.id}:${s}:${numbers.length}:l`)).toBeNull();
+  test('кнопки запасного меню открывают соответствующую шкалу', () => {
+    const home = trainingHome();
+    for (const row of home.reply_markup.inline_keyboard.slice(1)) {
+      const url = new URL(row[0].web_app!.url);
+      const route = parseStudyLink(url.hash)!;
+      expect(route).not.toBeNull();
+      expect(studyQuestions(QUESTIONNAIRES[route.test],route.scale)?.questions[0].number).toBe(route.question);
+    }
+  });
+  for (const def of Object.values(QUESTIONNAIRES)) test(`${def.id}: каждая подборка точно соответствует ключу`, () => {
+    for (const s of studyScales(def)) {
+      const data = studyQuestions(def,s.id)!;
+      const key = def.key[s.id];
+      const numbers = [...new Set([...key.yes,...key.no])].sort((a,b) => a-b);
+      expect(data.questions.map(q => q.number)).toEqual(numbers);
+      for (const q of data.questions) {
+        expect(q.text).toBe(def.questions[q.number-1]);
+        expect(q.answers.includes('Y')).toBe(key.yes.includes(q.number));
+        expect(q.answers.includes('N')).toBe(key.no.includes(q.number));
       }
-    });
-  }
-  test('неизвестные и повреждённые кнопки отклоняются', () => {
-    for (const data of ['t1:test:__proto__','t1:test:constructor','t1:card:smol:unknown:0:l','t1:card:smol:L:-1:l','t1:card:smol:L:1.5:l','t1:card:smol:L:9999:l','t1:card:smol:L:0:x','t1:answer:smol:L:0:l:Y','t1:answer:smol:L:0:q:?','t1:home:extra','t1:test:smol:extra']) expect(trainingView(data),data).toBeNull();
+      const legacy = trainingView(`t1:card:${def.id}:${s.id}:0:l`)!;
+      expect(legacy.text).not.toContain('Ответ по ключу:');
+      expect(legacy.reply_markup.inline_keyboard[0][0].web_app!.url).toContain(`#study/${def.id}/${s.id}/${s.first}`);
+    }
+  });
+  test('некорректные ссылки и неизвестные шкалы отклоняются', () => {
+    expect(parseStudyLink('','?tgWebAppStartParam=study_smil_L_5')).toEqual({test:'smil',scale:'L',question:5});
+    expect(parseStudyLink('#smil','?tgWebAppStartParam=study_smol_L_5')).toBeNull();
+    for (const hash of ['#study/unknown/L/1','#study/smol/L/0','#study/smil/L/-1','#study/smil/<script>/5','#study/smil/L/1/extra']) expect(parseStudyLink(hash)).toBeNull();
+    expect(studyQuestions(QUESTIONNAIRES.smol,'__proto__')).toBeNull();
+    for (const data of ['t1:test:__proto__','t1:card:smol:L:9999:l','t1:home:extra']) expect(trainingView(data)).toBeNull();
   });
 });
