@@ -55,6 +55,7 @@ describe('карточка шкал и переходы в приложение'
 });
 
 test('параметры запуска Telegram в hash не перекрывают ссылку на вопрос', () => {
+  expect(parseStudyLink('#tgWebAppData=user%3Dignored&tgWebAppVersion=10.4','?study=study_smol_F_2')).toEqual({test:'smol',scale:'F',question:2});
   expect(parseStudyLink('#tgWebAppData=user%3Dignored&tgWebAppVersion=10.4','?tgWebAppStartParam=study_smil_L_15')).toEqual({test:'smil',scale:'L',question:15});
   expect(parseStudyLink('#tgWebAppStartParam=study_smol_L_11')).toEqual({test:'smol',scale:'L',question:11});
   expect(parseStudyLink('#tgWebAppData=start_param%3Dstudy_mmil_L_50')).toEqual({test:'mmil',scale:'L',question:50});

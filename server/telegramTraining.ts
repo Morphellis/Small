@@ -7,7 +7,7 @@ export const STUDY_URL = 'https://small-botsfeature9nov.morphellis.workers.dev/'
 export const BOT_USERNAME = 'odinochnayaPalata_bot';
 export interface TrainingButton { text:string; callback_data?:string; web_app?:{url:string} }
 export interface TrainingView { text:string; reply_markup:{inline_keyboard:TrainingButton[][]} }
-export const studyUrl = (test:string,scale:string,question:number) => `${STUDY_URL}#study/${test}/${scale}/${question}`;
+export const studyUrl = (test:string,scale:string,question:number) => `${STUDY_URL}?study=study_${test}_${scale}_${question}#study/${test}/${scale}/${question}`;
 export function trainingHome():TrainingView {
   return {text:'Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение',reply_markup:{inline_keyboard:[
     [{text:'Открыть тренажёр',web_app:{url:TRAINER_URL}}],

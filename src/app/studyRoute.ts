@@ -5,7 +5,8 @@ export function parseStudyLink(hash:string, search = ''):StudyRoute | null {
   else {
     const launch = new URLSearchParams(hash.slice(1));
     if (hash && !launch.has('tgWebAppData') && !launch.has('tgWebAppVersion') && !launch.has('tgWebAppStartParam')) return null;
-    const start = new URLSearchParams(search).get('tgWebAppStartParam') ?? launch.get('tgWebAppStartParam') ??
+    const query = new URLSearchParams(search);
+    const start = query.get('study') ?? query.get('tgWebAppStartParam') ?? launch.get('tgWebAppStartParam') ??
       new URLSearchParams(launch.get('tgWebAppData') ?? '').get('start_param');
     if (start?.startsWith('study_')) parts = start.slice(6).split('_');
   }
