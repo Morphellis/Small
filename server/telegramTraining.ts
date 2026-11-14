@@ -1,5 +1,5 @@
 import { QUESTIONNAIRES } from './registry';
-import { studyScales } from './study';
+import { studyNumbers, studyScales } from './study';
 import { escapeHtml } from '../src/app/html';
 
 export const TRAINER_URL = 'https://small.morphellis.workers.dev/';
@@ -24,10 +24,10 @@ export function trainingView(data:string):TrainingView | null {
   if (parts[0] !== 't1' || !Object.hasOwn(QUESTIONNAIRES,id ?? '')) return null;
   const def = QUESTIONNAIRES[id];
   const scales = studyScales(def);
-  if (action === 'test' && parts.length === 3) return {text:`${def.title}\n\nВыберите шкалу. Вопросы откроются в приложении.`,reply_markup:{inline_keyboard:scales.map(s => [{text:`${s.code}: ${s.title}`,url:studyAppLink(id,s.id,s.first)}])}};
+  if (action === 'test' && parts.length === 3) return {text:`${def.title}\n\nВыберите шкалу. Вопросы откроются в приложении.`,reply_markup:{inline_keyboard:[...scales.map(s => [{text:`${s.code}: ${s.title}`,url:studyAppLink(id,s.id,s.first)}]),[{text:'← Выбрать другой тест',callback_data:'t1:home'}]]}};
   if (!['card','answer'].includes(action) || !def.scaleOrder.includes(scale) || !/^(0|[1-9]\d{0,3})$/.test(position ?? '') || !['l','q'].includes(mode)) return null;
   if ((action === 'card' && parts.length !== 6) || (action === 'answer' && (parts.length !== 7 || mode !== 'q' || !['Y','N'].includes(selected)))) return null;
-  const numbers = [...new Set([...def.key[scale].yes,...def.key[scale].no])].sort((a,b) => a-b);
+  const numbers = studyNumbers(def,scale);
   const number = numbers[Number(position)];
   if (!number) return null;
   return {text:`${def.title} · ${def.scaleInfo[scale].code}: ${def.scaleInfo[scale].title}\n\nПункт № ${number}. Откройте вопрос в приложении.`,reply_markup:{inline_keyboard:[[{text:'Открыть вопрос',url:studyAppLink(id,scale,number)}]]}};

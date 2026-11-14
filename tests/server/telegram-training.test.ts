@@ -21,7 +21,10 @@ describe('карточка шкал и переходы в приложение'
     for (const row of home.reply_markup.inline_keyboard.slice(1)) {
       const menu = trainingView(row[0].callback_data!)!;
       expect(menu.text).toContain('Выберите шкалу');
-      for (const scaleRow of menu.reply_markup.inline_keyboard) {
+      const back = menu.reply_markup.inline_keyboard.at(-1)![0];
+      expect(back.callback_data).toBe('t1:home');
+      expect(trainingView(back.callback_data!)).toEqual(home);
+      for (const scaleRow of menu.reply_markup.inline_keyboard.slice(0,-1)) {
         const url = new URL(scaleRow[0].url!);
         const route = parseStudyLink('', '?tgWebAppStartParam='+url.searchParams.get('startapp'))!;
         expect(route).not.toBeNull();
@@ -33,8 +36,10 @@ describe('карточка шкал и переходы в приложение'
     for (const s of studyScales(def)) {
       const data = studyQuestions(def,s.id)!;
       const key = def.key[s.id];
-      const numbers = [...new Set([...key.yes,...key.no])].sort((a,b) => a-b);
+      const numbers = [...new Set([...key.yes,...key.no])].filter(n => !(def.controlItems ?? []).includes(n) && !/обвести.*круж/iu.test(def.questions[n-1])).sort((a,b) => a-b);
       expect(data.questions.map(q => q.number)).toEqual(numbers);
+      expect(s.count).toBe(numbers.length);
+      expect(s.first).toBe(numbers[0]);
       for (const q of data.questions) {
         expect(q.text).toBe(def.questions[q.number-1]);
         expect(q.answers.includes('Y')).toBe(key.yes.includes(q.number));
