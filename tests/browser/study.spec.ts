@@ -77,3 +77,8 @@ test('HTML-карточка переключает тесты и открыва�
   await expect(page.locator('#smil')).toBeHidden();
   await expect(page.locator('#mmil')).toBeVisible();
 });
+
+test('служебный hash Telegram сохраняет открытие выбранного пункта', async ({page}) => {
+  await page.goto('/?tgWebAppStartParam=study_smol_L_11#tgWebAppData=user%3Dtest&tgWebAppVersion=10.4');
+  await expect(page.locator('.study-card h2')).toHaveText('Пункт № 11');
+});

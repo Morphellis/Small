@@ -49,3 +49,9 @@ describe('карточка шкал и переходы в приложение'
     for (const data of ['t1:test:__proto__','t1:card:smol:L:9999:l','t1:home:extra']) expect(trainingView(data)).toBeNull();
   });
 });
+
+test('параметры запуска Telegram в hash не перекрывают ссылку на вопрос', () => {
+  expect(parseStudyLink('#tgWebAppData=user%3Dignored&tgWebAppVersion=10.4','?tgWebAppStartParam=study_smil_L_15')).toEqual({test:'smil',scale:'L',question:15});
+  expect(parseStudyLink('#tgWebAppStartParam=study_smol_L_11')).toEqual({test:'smol',scale:'L',question:11});
+  expect(parseStudyLink('#tgWebAppData=start_param%3Dstudy_mmil_L_50')).toEqual({test:'mmil',scale:'L',question:50});
+});

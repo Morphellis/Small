@@ -66,10 +66,16 @@ export async function telegramWebhook(request: Request, secret: string | undefin
       typeof message.text !== "string") return json({ ok: true });
   const command = /^\/(start|help|app|learn|scales)(?:@[a-zA-Z0-9_]+)?(?:\s|$)/i.test(message.text);
   const home = trainingHome();
-  if (command) return json({
-    method:'sendWidget', chat_id:message.chat.id, html:trainingWidgetHtml(), caption:home.text,
-    reply_markup:home.reply_markup
-  });
+  if (command) {
+    const widget = {chat_id:message.chat.id,html:trainingWidgetHtml(),caption:'Изучение шкал. Выберите тест и шкалу.',reply_markup:home.reply_markup};
+    if (token) {
+      const sent = await callTelegram(token,'sendMessage',{chat_id:message.chat.id,...home});
+      if (!sent) return json({method:'sendMessage',chat_id:message.chat.id,...home});
+      await callTelegram(token,'sendWidget',widget);
+      return json({ok:true});
+    }
+    return json({method:'sendWidget',...widget,caption:home.text});
+  }
   return json({
     method: "sendMessage",
     chat_id: message.chat.id,

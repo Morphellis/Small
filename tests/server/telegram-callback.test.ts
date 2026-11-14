@@ -75,3 +75,13 @@ test('владелец может настроить webhook по токену �
   const owner = new Request('https://example.test/api/telegram/setup',{method:'POST',headers:{Authorization:`Bearer ${token}`}});
   expect((await configureTelegramWebhook(owner,secret,token)).status).toBe(200);
 });
+
+test('start отправляет точный текст и затем виджет отдельными запросами', async () => {
+  const send=vi.fn(async () => Response.json({ok:true})); vi.stubGlobal('fetch',send);
+  const body={message:{chat:{id:123,type:'private'},text:'/start'}};
+  expect(await (await telegramWebhook(request(body),secret,token)).json()).toEqual({ok:true});
+  const calls=send.mock.calls as unknown[][];
+  expect(calls[0][0]).toBe('https://api.telegram.org/bottest-token/sendMessage');
+  expect(calls[1][0]).toBe('https://api.telegram.org/bottest-token/sendWidget');
+  expect(JSON.parse((calls[0][1] as RequestInit).body as string).text).toBe('Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение');
+});
