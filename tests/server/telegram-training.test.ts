@@ -22,8 +22,8 @@ describe('карточка шкал и переходы в приложение'
       const menu = trainingView(row[0].callback_data!)!;
       expect(menu.text).toContain('Выберите шкалу');
       for (const scaleRow of menu.reply_markup.inline_keyboard) {
-        const url = new URL(scaleRow[0].web_app!.url);
-        const route = parseStudyLink(url.hash)!;
+        const url = new URL(scaleRow[0].url!);
+        const route = parseStudyLink('', '?tgWebAppStartParam='+url.searchParams.get('startapp'))!;
         expect(route).not.toBeNull();
         expect(studyQuestions(QUESTIONNAIRES[route.test],route.scale)?.questions[0].number).toBe(route.question);
       }
@@ -42,7 +42,7 @@ describe('карточка шкал и переходы в приложение'
       }
       const legacy = trainingView(`t1:card:${def.id}:${s.id}:0:l`)!;
       expect(legacy.text).not.toContain('Ответ по ключу:');
-      expect(legacy.reply_markup.inline_keyboard[0][0].web_app!.url).toContain(`#study/${def.id}/${s.id}/${s.first}`);
+      expect(legacy.reply_markup.inline_keyboard[0][0].url).toBe(`https://t.me/odinochnayaPalata_bot/study?startapp=study_${def.id}_${s.id}_${s.first}`);
     }
   });
   test('некорректные ссылки и неизвестные шкалы отклоняются', () => {

@@ -5,8 +5,9 @@ import { escapeHtml } from '../src/app/html';
 export const TRAINER_URL = 'https://small.morphellis.workers.dev/';
 export const STUDY_URL = 'https://small-botsfeature9nov.morphellis.workers.dev/';
 export const BOT_USERNAME = 'odinochnayaPalata_bot';
-export interface TrainingButton { text:string; callback_data?:string; web_app?:{url:string} }
+export interface TrainingButton { text:string; callback_data?:string; web_app?:{url:string}; url?:string }
 export interface TrainingView { text:string; reply_markup:{inline_keyboard:TrainingButton[][]} }
+export const studyAppLink = (test:string,scale:string,question:number) => `https://t.me/${BOT_USERNAME}/study?startapp=study_${test}_${scale}_${question}`;
 export const studyUrl = (test:string,scale:string,question:number) => `${STUDY_URL}?study=study_${test}_${scale}_${question}#study/${test}/${scale}/${question}`;
 export function trainingHome():TrainingView {
   return {text:'Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение',reply_markup:{inline_keyboard:[
@@ -23,13 +24,13 @@ export function trainingView(data:string):TrainingView | null {
   if (parts[0] !== 't1' || !Object.hasOwn(QUESTIONNAIRES,id ?? '')) return null;
   const def = QUESTIONNAIRES[id];
   const scales = studyScales(def);
-  if (action === 'test' && parts.length === 3) return {text:`${def.title}\n\nВыберите шкалу. Вопросы откроются в приложении.`,reply_markup:{inline_keyboard:scales.map(s => [{text:`${s.code}: ${s.title}`,web_app:{url:studyUrl(id,s.id,s.first)}}])}};
+  if (action === 'test' && parts.length === 3) return {text:`${def.title}\n\nВыберите шкалу. Вопросы откроются в приложении.`,reply_markup:{inline_keyboard:scales.map(s => [{text:`${s.code}: ${s.title}`,url:studyAppLink(id,s.id,s.first)}])}};
   if (!['card','answer'].includes(action) || !def.scaleOrder.includes(scale) || !/^(0|[1-9]\d{0,3})$/.test(position ?? '') || !['l','q'].includes(mode)) return null;
   if ((action === 'card' && parts.length !== 6) || (action === 'answer' && (parts.length !== 7 || mode !== 'q' || !['Y','N'].includes(selected)))) return null;
   const numbers = [...new Set([...def.key[scale].yes,...def.key[scale].no])].sort((a,b) => a-b);
   const number = numbers[Number(position)];
   if (!number) return null;
-  return {text:`${def.title} · ${def.scaleInfo[scale].code}: ${def.scaleInfo[scale].title}\n\nПункт № ${number}. Откройте вопрос в приложении.`,reply_markup:{inline_keyboard:[[{text:'Открыть вопрос',web_app:{url:studyUrl(id,scale,number)}}]]}};
+  return {text:`${def.title} · ${def.scaleInfo[scale].code}: ${def.scaleInfo[scale].title}\n\nПункт № ${number}. Откройте вопрос в приложении.`,reply_markup:{inline_keyboard:[[{text:'Открыть вопрос',url:studyAppLink(id,scale,number)}]]}};
 }
 
 export function trainingWidgetHtml():string {
