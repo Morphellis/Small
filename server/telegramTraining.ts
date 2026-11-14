@@ -11,7 +11,7 @@ export const studyUrl = (test:string,scale:string,question:number) => `${STUDY_U
 export function trainingHome():TrainingView {
   return {text:'Тренажёр психологических тестов.\n\nДоступны СМОЛ, СМИЛ, ММИЛ и тест Люшера.\n\nДля работы с тестами откройте приложение',reply_markup:{inline_keyboard:[
     [{text:'Открыть тренажёр',web_app:{url:TRAINER_URL}}],
-    ...Object.values(QUESTIONNAIRES).map(def => [{text:`Шкалы ${def.title}`,web_app:{url:studyUrl(def.id,studyScales(def)[0].id,studyScales(def)[0].first)}}])
+    ...Object.values(QUESTIONNAIRES).map(def => [{text:`Шкалы ${def.title}`,callback_data:`t1:test:${def.id}`}])
   ]}};
 }
 

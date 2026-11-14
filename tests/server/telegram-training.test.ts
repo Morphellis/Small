@@ -19,10 +19,14 @@ describe('карточка шкал и переходы в приложение'
   test('кнопки запасного меню открывают соответствующую шкалу', () => {
     const home = trainingHome();
     for (const row of home.reply_markup.inline_keyboard.slice(1)) {
-      const url = new URL(row[0].web_app!.url);
-      const route = parseStudyLink(url.hash)!;
-      expect(route).not.toBeNull();
-      expect(studyQuestions(QUESTIONNAIRES[route.test],route.scale)?.questions[0].number).toBe(route.question);
+      const menu = trainingView(row[0].callback_data!)!;
+      expect(menu.text).toContain('Выберите шкалу');
+      for (const scaleRow of menu.reply_markup.inline_keyboard) {
+        const url = new URL(scaleRow[0].web_app!.url);
+        const route = parseStudyLink(url.hash)!;
+        expect(route).not.toBeNull();
+        expect(studyQuestions(QUESTIONNAIRES[route.test],route.scale)?.questions[0].number).toBe(route.question);
+      }
     }
   });
   for (const def of Object.values(QUESTIONNAIRES)) test(`${def.id}: каждая подборка точно соответствует ключу`, () => {
